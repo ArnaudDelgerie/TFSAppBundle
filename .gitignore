@@ -1,5 +1,6 @@
 composer.phar
 /vendor/
+/.phpunit.result.cache
 
 # Local plans/process notes, never part of the repo (see .project/doc/git.md)
 .project/
