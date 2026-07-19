@@ -15,6 +15,11 @@ Early stage, no release yet. **v0.1.0 scope**: relocate Symfony's cache/build/lo
 
 Not published yet. Once released: `composer require` this bundle into a Symfony project meant to run under TFSAppWorkstation.
 
+Registering the bundle is all it takes: `GET /healthz` (and `HEAD`) then
+answers `200` before routing and security run, per the station contract —
+no configuration, no route to declare. Any other path or method is left
+untouched and reaches the app's own routing as usual.
+
 ## Development
 
 Not published to Packagist yet — for now, require it via a VCS repository:
