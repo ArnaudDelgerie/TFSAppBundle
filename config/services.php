@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use ArnaudDelgerie\TFSAppBundle\Command\InitCommand;
 use ArnaudDelgerie\TFSAppBundle\EventListener\HealthzListener;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 
@@ -13,4 +14,9 @@ return static function (ContainerConfigurator $container): void {
             'method' => 'onKernelRequest',
             'priority' => 2048,
         ]);
+
+    $container->services()
+        ->set(InitCommand::class)
+        ->autowire()
+        ->tag('console.command');
 };
