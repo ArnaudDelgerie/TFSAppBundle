@@ -46,8 +46,8 @@ default under the project's `var/`.
 ### `tfsapp:init`
 
 Run `bin/console tfsapp:init` from the host app to generate
-`tfsapp.config.json` at the project root (one level above the `app/`
-kernel dir, per the station contract's project layout). It prompts for
+`tfsapp.config.json` at the project root (the Symfony kernel's own
+project dir, per the station contract's project layout). It prompts for
 the four required identity fields — `project_name`, `product_name`,
 `identifier`, `app_version` — each with a sensible derived default;
 pressing Enter accepts the default, invalid input is re-asked rather

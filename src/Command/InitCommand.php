@@ -23,15 +23,8 @@ final class InitCommand extends Command
     {
         $io = new SymfonyStyle($input, $output);
 
-        $kernelDir = rtrim($this->kernel->getProjectDir(), '/');
-        if (basename($kernelDir) !== 'app') {
-            $io->warning(sprintf(
-                'Expected the Symfony app to live under a directory named "app" (found "%s") — the station layout may not be in place.',
-                basename($kernelDir),
-            ));
-        }
-
-        $configPath = \dirname($kernelDir) . '/tfsapp.config.json';
+        $projectDir = rtrim($this->kernel->getProjectDir(), '/');
+        $configPath = $projectDir . '/tfsapp.config.json';
 
         if (is_file($configPath)) {
             $io->success(sprintf('%s already exists.', $configPath));
@@ -39,7 +32,7 @@ final class InitCommand extends Command
             return Command::SUCCESS;
         }
 
-        $defaultProjectName = self::slugify(basename(\dirname($kernelDir)));
+        $defaultProjectName = self::slugify(basename($projectDir));
 
         $projectName = $io->ask('project_name', $defaultProjectName, self::projectNameValidator(...));
         $productName = $io->ask('product_name', self::humanize($projectName), self::productNameValidator(...));
