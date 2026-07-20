@@ -2,8 +2,13 @@
 
 namespace ArnaudDelgerie\TFSAppBundle\Kernel;
 
-trait TFSAppKernelTrait
+use Symfony\Bundle\FrameworkBundle\Kernel\MicroKernelTrait;
+use Symfony\Component\HttpKernel\Kernel;
+
+abstract class TFSAppKernel extends Kernel
 {
+    use MicroKernelTrait;
+
     public function getCacheDir(): string
     {
         return $_SERVER['APP_CACHE_DIR'] ?? parent::getCacheDir();
