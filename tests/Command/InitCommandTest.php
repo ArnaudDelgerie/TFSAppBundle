@@ -97,10 +97,9 @@ final class InitCommandTest extends TestCase
     private function createTester(string $rootBasename): CommandTester
     {
         $this->projectRoot = $this->baseDir . '/' . $rootBasename;
-        $kernelDir = $this->projectRoot . '/app';
-        mkdir($kernelDir, 0777, true);
+        mkdir($this->projectRoot, 0777, true);
 
-        $this->kernel = new InitCommandTestKernel($kernelDir);
+        $this->kernel = new InitCommandTestKernel($this->projectRoot);
         $this->kernel->boot();
 
         $application = new Application($this->kernel);
