@@ -2,17 +2,14 @@
 
 namespace ArnaudDelgerie\TFSAppBundle\Tests\Kernel;
 
-use ArnaudDelgerie\TFSAppBundle\Kernel\TFSAppKernelTrait;
+use ArnaudDelgerie\TFSAppBundle\Kernel\TFSAppKernel;
 use ArnaudDelgerie\TFSAppBundle\TFSAppBundle;
 use Symfony\Bundle\FrameworkBundle\FrameworkBundle;
 use Symfony\Component\Config\Loader\LoaderInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
-use Symfony\Component\HttpKernel\Kernel;
 
-final class RelocatedTestKernel extends Kernel
+final class RelocatedTestKernel extends TFSAppKernel
 {
-    use TFSAppKernelTrait;
-
     public function registerBundles(): iterable
     {
         yield new FrameworkBundle();
