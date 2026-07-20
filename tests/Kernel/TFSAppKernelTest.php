@@ -6,7 +6,7 @@ namespace ArnaudDelgerie\TFSAppBundle\Tests\Kernel;
 
 use PHPUnit\Framework\TestCase;
 
-final class TFSAppKernelTraitTest extends TestCase
+final class TFSAppKernelTest extends TestCase
 {
     private array $serverBackup;
 
