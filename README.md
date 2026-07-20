@@ -22,17 +22,13 @@ untouched and reaches the app's own routing as usual.
 
 ### Kernel dir relocation
 
-Add `use TFSAppKernelTrait;` to the host app's `Kernel`:
+Extend `TFSAppKernel` instead of composing `MicroKernelTrait` directly:
 
 ```php
-use ArnaudDelgerie\TFSAppBundle\Kernel\TFSAppKernelTrait;
-use Symfony\Bundle\FrameworkBundle\Kernel\MicroKernelTrait;
-use Symfony\Component\HttpKernel\Kernel as BaseKernel;
+use ArnaudDelgerie\TFSAppBundle\Kernel\TFSAppKernel;
 
-class Kernel extends BaseKernel
+class Kernel extends TFSAppKernel
 {
-    use MicroKernelTrait;
-    use TFSAppKernelTrait;
 }
 ```
 
