@@ -6,6 +6,8 @@ use ArnaudDelgerie\TFSAppBundle\Bridge\BridgeTransport;
 use ArnaudDelgerie\TFSAppBundle\Bridge\BridgeTransportFactory;
 use ArnaudDelgerie\TFSAppBundle\Bridge\SecretStore;
 use ArnaudDelgerie\TFSAppBundle\Bridge\SecretStoreInterface;
+use ArnaudDelgerie\TFSAppBundle\Bridge\UpdateChecker;
+use ArnaudDelgerie\TFSAppBundle\Bridge\UpdateCheckerInterface;
 use ArnaudDelgerie\TFSAppBundle\Command\InitCommand;
 use ArnaudDelgerie\TFSAppBundle\EventListener\HealthzListener;
 use ArnaudDelgerie\TFSAppBundle\StationContext\StationContext;
@@ -56,4 +58,11 @@ return static function (ContainerConfigurator $container): void {
 
     $container->services()
         ->alias(SecretStoreInterface::class, SecretStore::class);
+
+    $container->services()
+        ->set(UpdateChecker::class)
+        ->autowire();
+
+    $container->services()
+        ->alias(UpdateCheckerInterface::class, UpdateChecker::class);
 };
