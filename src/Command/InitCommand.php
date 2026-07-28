@@ -39,12 +39,23 @@ final class InitCommand extends Command
         $identifier = $io->ask('identifier', 'dev.local.' . $projectName, self::identifierValidator(...));
         $appVersion = $io->ask('app_version', '0.1.0', self::appVersionValidator(...));
 
+        $asyncWorker = $io->confirm('async_worker', false);
+        $releasesRepo = $io->ask('releases_repo', '', self::releasesRepoValidator(...));
+
         $config = [
             'project_name' => $projectName,
             'product_name' => $productName,
             'identifier' => $identifier,
             'app_version' => $appVersion,
         ];
+
+        if ($asyncWorker) {
+            $config['async_worker'] = true;
+        }
+
+        if ('' !== $releasesRepo) {
+            $config['releases_repo'] = $releasesRepo;
+        }
 
         file_put_contents(
             $configPath,
@@ -100,6 +111,19 @@ final class InitCommand extends Command
     {
         if (null === $answer || preg_match('/^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)$/', $answer) !== 1) {
             throw new \InvalidArgumentException('app_version must be canonical MAJOR.MINOR.PATCH semver with no leading zeros (e.g. 1.2.3).');
+        }
+
+        return $answer;
+    }
+
+    private static function releasesRepoValidator(?string $answer): string
+    {
+        if (null === $answer || '' === $answer) {
+            return '';
+        }
+
+        if (preg_match('/^[A-Za-z0-9._-]+(?:\/[A-Za-z0-9._-]+)?$/', $answer) !== 1) {
+            throw new \InvalidArgumentException('releases_repo must be a bare repo name or an owner/repo pair (e.g. myapp or myorg/myapp).');
         }
 
         return $answer;

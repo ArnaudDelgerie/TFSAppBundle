@@ -32,7 +32,7 @@ final class InitCommandTest extends TestCase
     {
         $tester = $this->createTester('Demo Project');
 
-        $tester->setInputs(['', '', '', '']);
+        $tester->setInputs(['', '', '', '', '', '']);
         $tester->execute([]);
 
         self::assertSame(0, $tester->getStatusCode());
@@ -49,7 +49,7 @@ final class InitCommandTest extends TestCase
     {
         $tester = $this->createTester('project');
 
-        $tester->setInputs(['custom_app', 'Custom App Name', 'com.example.customapp', '2.3.4']);
+        $tester->setInputs(['custom_app', 'Custom App Name', 'com.example.customapp', '2.3.4', '', '']);
         $tester->execute([]);
 
         self::assertSame(0, $tester->getStatusCode());
@@ -66,7 +66,7 @@ final class InitCommandTest extends TestCase
     {
         $tester = $this->createTester('project');
 
-        $tester->setInputs(['bad name', 'goodname', '', '', '01.2.3', '1.2.3']);
+        $tester->setInputs(['bad name', 'goodname', '', '', '01.2.3', '1.2.3', '', '']);
         $tester->execute([]);
 
         self::assertSame(0, $tester->getStatusCode());
@@ -77,6 +77,61 @@ final class InitCommandTest extends TestCase
             'identifier' => 'dev.local.goodname',
             'app_version' => '1.2.3',
         ], $this->readConfig());
+    }
+
+    public function testAsyncWorkerYesAddsKey(): void
+    {
+        $tester = $this->createTester('project');
+
+        $tester->setInputs(['', '', '', '', 'yes', '']);
+        $tester->execute([]);
+
+        self::assertSame(0, $tester->getStatusCode());
+        self::assertSame(true, $this->readConfig()['async_worker']);
+    }
+
+    public function testAsyncWorkerNoOmitsKey(): void
+    {
+        $tester = $this->createTester('project');
+
+        $tester->setInputs(['', '', '', '', 'no', '']);
+        $tester->execute([]);
+
+        self::assertSame(0, $tester->getStatusCode());
+        self::assertArrayNotHasKey('async_worker', $this->readConfig());
+    }
+
+    public function testReleasesRepoProvidedIsWritten(): void
+    {
+        $tester = $this->createTester('project');
+
+        $tester->setInputs(['', '', '', '', '', 'myorg/myapp']);
+        $tester->execute([]);
+
+        self::assertSame(0, $tester->getStatusCode());
+        self::assertSame('myorg/myapp', $this->readConfig()['releases_repo']);
+    }
+
+    public function testReleasesRepoEmptyOmitsKey(): void
+    {
+        $tester = $this->createTester('project');
+
+        $tester->setInputs(['', '', '', '', '', '']);
+        $tester->execute([]);
+
+        self::assertSame(0, $tester->getStatusCode());
+        self::assertArrayNotHasKey('releases_repo', $this->readConfig());
+    }
+
+    public function testReleasesRepoMalformedIsReaskedThenAccepted(): void
+    {
+        $tester = $this->createTester('project');
+
+        $tester->setInputs(['', '', '', '', '', 'bad repo!', 'myorg/myapp']);
+        $tester->execute([]);
+
+        self::assertSame(0, $tester->getStatusCode());
+        self::assertSame('myorg/myapp', $this->readConfig()['releases_repo']);
     }
 
     public function testExistingFileIsLeftUntouchedAndNoPromptsAreShown(): void
