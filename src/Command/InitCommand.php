@@ -24,12 +24,22 @@ final class InitCommand extends Command
         $io = new SymfonyStyle($input, $output);
 
         $projectDir = rtrim($this->kernel->getProjectDir(), '/');
+
+        $this->ensureConfig($projectDir, $io);
+        $this->ensureBuildDir($projectDir, $io);
+        $this->ensureGitignore($projectDir, $io);
+
+        return Command::SUCCESS;
+    }
+
+    private function ensureConfig(string $projectDir, SymfonyStyle $io): void
+    {
         $configPath = $projectDir . '/tfsapp.config.json';
 
         if (is_file($configPath)) {
             $io->success(sprintf('%s already exists.', $configPath));
 
-            return Command::SUCCESS;
+            return;
         }
 
         $defaultProjectName = self::slugify(basename($projectDir));
@@ -66,8 +76,52 @@ final class InitCommand extends Command
         );
 
         $io->success(sprintf('Created %s', $configPath));
+    }
 
-        return Command::SUCCESS;
+    private function ensureBuildDir(string $projectDir, SymfonyStyle $io): void
+    {
+        $buildDir = $projectDir . '/tfsapp_build';
+
+        if (is_dir($buildDir)) {
+            $io->success(sprintf('%s already exists.', $buildDir));
+
+            return;
+        }
+
+        mkdir($buildDir);
+
+        $io->success(sprintf('Created %s', $buildDir));
+    }
+
+    private function ensureGitignore(string $projectDir, SymfonyStyle $io): void
+    {
+        $gitignorePath = $projectDir . '/.gitignore';
+        $entry = '/tfsapp_build/';
+
+        if (!is_file($gitignorePath)) {
+            file_put_contents($gitignorePath, $entry . \PHP_EOL);
+            $io->success(sprintf('Created %s with %s', $gitignorePath, $entry));
+
+            return;
+        }
+
+        $contents = file_get_contents($gitignorePath);
+        $lines = array_map('trim', preg_split('/\R/', $contents ?: ''));
+
+        if (\in_array($entry, $lines, true)) {
+            $io->success(sprintf('%s already ignores %s', $gitignorePath, $entry));
+
+            return;
+        }
+
+        $needsLeadingNewline = '' !== $contents && !str_ends_with($contents, "\n");
+        file_put_contents(
+            $gitignorePath,
+            ($needsLeadingNewline ? \PHP_EOL : '') . $entry . \PHP_EOL,
+            \FILE_APPEND,
+        );
+
+        $io->success(sprintf('Added %s to %s', $entry, $gitignorePath));
     }
 
     private static function slugify(string $value): string
