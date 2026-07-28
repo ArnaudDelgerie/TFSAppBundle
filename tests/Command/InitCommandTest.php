@@ -280,6 +280,71 @@ final class InitCommandTest extends TestCase
         self::assertNotContains('/tfsapp.config.json', $gitignoreLines);
     }
 
+    public function testChangelogIsCreatedWithConfiguredAppVersion(): void
+    {
+        $tester = $this->createTester('project');
+
+        $tester->setInputs(['', '', '', '2.5.0', '', '']);
+        $tester->execute([]);
+
+        self::assertSame(Command::SUCCESS, $tester->getStatusCode());
+
+        $changelogPath = $this->projectRoot . '/CHANGELOG.md';
+        self::assertFileExists($changelogPath);
+        self::assertSame(
+            '# Changelog' . \PHP_EOL . \PHP_EOL . '## 2.5.0' . \PHP_EOL . \PHP_EOL . '- Initial release.' . \PHP_EOL,
+            file_get_contents($changelogPath),
+        );
+    }
+
+    public function testExistingChangelogIsLeftUntouched(): void
+    {
+        $tester = $this->createTester('project');
+
+        $changelogPath = $this->projectRoot . '/CHANGELOG.md';
+        $original = '# Changelog' . \PHP_EOL . \PHP_EOL . '## 9.9.9' . \PHP_EOL . \PHP_EOL . '- Something else.' . \PHP_EOL;
+        file_put_contents($changelogPath, $original);
+
+        $tester->setInputs(['', '', '', '', '', '']);
+        $tester->execute([]);
+
+        self::assertSame(Command::SUCCESS, $tester->getStatusCode());
+        self::assertSame($original, file_get_contents($changelogPath));
+    }
+
+    public function testSecondRunLeavesChangelogUntouched(): void
+    {
+        $tester = $this->createTester('project');
+
+        $tester->setInputs(['', '', '', '', '', '']);
+        $tester->execute([]);
+
+        self::assertSame(Command::SUCCESS, $tester->getStatusCode());
+
+        $changelogPath = $this->projectRoot . '/CHANGELOG.md';
+        $afterFirstRun = file_get_contents($changelogPath);
+
+        $secondTester = new CommandTester((new Application($this->kernel))->find('tfsapp:init'));
+        $secondTester->execute([]);
+
+        self::assertSame(Command::SUCCESS, $secondTester->getStatusCode());
+        self::assertSame($afterFirstRun, file_get_contents($changelogPath));
+    }
+
+    public function testChangelogIsSkippedWithWarningWhenConfigIsMalformed(): void
+    {
+        $tester = $this->createTester('project');
+
+        $configPath = $this->projectRoot . '/tfsapp.config.json';
+        file_put_contents($configPath, '{not valid json');
+
+        $tester->execute([]);
+
+        self::assertSame(Command::SUCCESS, $tester->getStatusCode());
+        self::assertFileDoesNotExist($this->projectRoot . '/CHANGELOG.md');
+        self::assertStringContainsString('Could not resolve app_version', $tester->getDisplay());
+    }
+
     private function createTester(string $rootBasename): CommandTester
     {
         $this->projectRoot = $this->baseDir . '/' . $rootBasename;
