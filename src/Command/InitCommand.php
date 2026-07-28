@@ -28,6 +28,7 @@ final class InitCommand extends Command
         $this->ensureConfig($projectDir, $io);
         $this->ensureBuildDir($projectDir, $io);
         $this->ensureGitignore($projectDir, $io);
+        $this->ensureChangelog($projectDir, $io);
 
         return Command::SUCCESS;
     }
@@ -122,6 +123,60 @@ final class InitCommand extends Command
         );
 
         $io->success(sprintf('Added %s to %s', $entry, $gitignorePath));
+    }
+
+    private function ensureChangelog(string $projectDir, SymfonyStyle $io): void
+    {
+        $changelogPath = $projectDir . '/CHANGELOG.md';
+
+        if (is_file($changelogPath)) {
+            $io->success(sprintf('%s already exists.', $changelogPath));
+
+            return;
+        }
+
+        $appVersion = self::resolveAppVersion($projectDir . '/tfsapp.config.json');
+
+        if (null === $appVersion) {
+            $io->warning(sprintf('Could not resolve app_version from %s/tfsapp.config.json; skipping CHANGELOG.md.', $projectDir));
+
+            return;
+        }
+
+        $contents = '# Changelog' . \PHP_EOL
+            . \PHP_EOL
+            . '## ' . $appVersion . \PHP_EOL
+            . \PHP_EOL
+            . '- Initial release.' . \PHP_EOL;
+
+        file_put_contents($changelogPath, $contents);
+
+        $io->success(sprintf('Created %s', $changelogPath));
+    }
+
+    private static function resolveAppVersion(string $configPath): ?string
+    {
+        if (!is_file($configPath)) {
+            return null;
+        }
+
+        $contents = file_get_contents($configPath);
+
+        if (false === $contents) {
+            return null;
+        }
+
+        try {
+            $config = json_decode($contents, true, flags: \JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            return null;
+        }
+
+        if (!\is_array($config) || !isset($config['app_version']) || !\is_string($config['app_version'])) {
+            return null;
+        }
+
+        return $config['app_version'];
     }
 
     private static function slugify(string $value): string
