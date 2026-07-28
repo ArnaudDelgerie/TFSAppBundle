@@ -24,12 +24,20 @@ final class InitCommand extends Command
         $io = new SymfonyStyle($input, $output);
 
         $projectDir = rtrim($this->kernel->getProjectDir(), '/');
+
+        $this->ensureConfig($projectDir, $io);
+
+        return Command::SUCCESS;
+    }
+
+    private function ensureConfig(string $projectDir, SymfonyStyle $io): void
+    {
         $configPath = $projectDir . '/tfsapp.config.json';
 
         if (is_file($configPath)) {
             $io->success(sprintf('%s already exists.', $configPath));
 
-            return Command::SUCCESS;
+            return;
         }
 
         $defaultProjectName = self::slugify(basename($projectDir));
@@ -66,8 +74,6 @@ final class InitCommand extends Command
         );
 
         $io->success(sprintf('Created %s', $configPath));
-
-        return Command::SUCCESS;
     }
 
     private static function slugify(string $value): string

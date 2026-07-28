@@ -6,6 +6,7 @@ namespace ArnaudDelgerie\TFSAppBundle\Tests\Command;
 
 use PHPUnit\Framework\TestCase;
 use Symfony\Bundle\FrameworkBundle\Console\Application;
+use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Tester\CommandTester;
 
 final class InitCommandTest extends TestCase
@@ -198,7 +199,7 @@ final class InitCommandTest extends TestCase
         self::assertSame(self::actionsSkeleton(), $this->readConfig()['actions']);
     }
 
-    public function testExistingFileIsLeftUntouchedAndNoPromptsAreShown(): void
+    public function testExistingFileIsLeftUntouchedAndCommandStillRunsToCompletion(): void
     {
         $tester = $this->createTester('project');
 
@@ -208,7 +209,7 @@ final class InitCommandTest extends TestCase
 
         $tester->execute([]);
 
-        self::assertSame(0, $tester->getStatusCode());
+        self::assertSame(Command::SUCCESS, $tester->getStatusCode());
         self::assertStringNotContainsString('project_name', $tester->getDisplay());
         self::assertSame($original, file_get_contents($configPath));
     }
