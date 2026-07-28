@@ -8,6 +8,7 @@ use ArnaudDelgerie\TFSAppBundle\Bridge\SecretStore;
 use ArnaudDelgerie\TFSAppBundle\Bridge\SecretStoreInterface;
 use ArnaudDelgerie\TFSAppBundle\Bridge\UpdateChecker;
 use ArnaudDelgerie\TFSAppBundle\Bridge\UpdateCheckerInterface;
+use ArnaudDelgerie\TFSAppBundle\Command\DoctorCommand;
 use ArnaudDelgerie\TFSAppBundle\Command\InitCommand;
 use ArnaudDelgerie\TFSAppBundle\EventListener\HealthzListener;
 use ArnaudDelgerie\TFSAppBundle\StationContext\StationContext;
@@ -29,6 +30,11 @@ return static function (ContainerConfigurator $container): void {
 
     $container->services()
         ->set(InitCommand::class)
+        ->autowire()
+        ->tag('console.command');
+
+    $container->services()
+        ->set(DoctorCommand::class)
         ->autowire()
         ->tag('console.command');
 
