@@ -8,11 +8,13 @@ use ArnaudDelgerie\TFSAppBundle\Bridge\SecretStore;
 use ArnaudDelgerie\TFSAppBundle\Bridge\SecretStoreInterface;
 use ArnaudDelgerie\TFSAppBundle\Bridge\UpdateChecker;
 use ArnaudDelgerie\TFSAppBundle\Bridge\UpdateCheckerInterface;
+use ArnaudDelgerie\TFSAppBundle\Command\DoctorCommand;
 use ArnaudDelgerie\TFSAppBundle\Command\InitCommand;
 use ArnaudDelgerie\TFSAppBundle\EventListener\HealthzListener;
 use ArnaudDelgerie\TFSAppBundle\StationContext\StationContext;
 use ArnaudDelgerie\TFSAppBundle\StationContext\StationContextFactory;
 use ArnaudDelgerie\TFSAppBundle\StationContext\StationContextInterface;
+use ArnaudDelgerie\TFSAppBundle\Twig\TfsAppTwigGlobal;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 
 use function Symfony\Component\DependencyInjection\Loader\Configurator\service;
@@ -28,6 +30,11 @@ return static function (ContainerConfigurator $container): void {
 
     $container->services()
         ->set(InitCommand::class)
+        ->autowire()
+        ->tag('console.command');
+
+    $container->services()
+        ->set(DoctorCommand::class)
         ->autowire()
         ->tag('console.command');
 
@@ -65,4 +72,8 @@ return static function (ContainerConfigurator $container): void {
 
     $container->services()
         ->alias(UpdateCheckerInterface::class, UpdateChecker::class);
+
+    $container->services()
+        ->set(TfsAppTwigGlobal::class)
+        ->autowire();
 };
