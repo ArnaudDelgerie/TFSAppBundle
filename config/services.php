@@ -2,6 +2,10 @@
 
 declare(strict_types=1);
 
+use ArnaudDelgerie\TFSAppBundle\Bridge\BridgeTransport;
+use ArnaudDelgerie\TFSAppBundle\Bridge\BridgeTransportFactory;
+use ArnaudDelgerie\TFSAppBundle\Bridge\SecretStore;
+use ArnaudDelgerie\TFSAppBundle\Bridge\SecretStoreInterface;
 use ArnaudDelgerie\TFSAppBundle\Command\InitCommand;
 use ArnaudDelgerie\TFSAppBundle\EventListener\HealthzListener;
 use ArnaudDelgerie\TFSAppBundle\StationContext\StationContext;
@@ -36,4 +40,20 @@ return static function (ContainerConfigurator $container): void {
 
     $container->services()
         ->alias(StationContextInterface::class, StationContext::class);
+
+    $container->services()
+        ->set(BridgeTransportFactory::class)
+        ->autowire();
+
+    $container->services()
+        ->set(BridgeTransport::class)
+        ->factory([service(BridgeTransportFactory::class), 'create'])
+        ->autowire();
+
+    $container->services()
+        ->set(SecretStore::class)
+        ->autowire();
+
+    $container->services()
+        ->alias(SecretStoreInterface::class, SecretStore::class);
 };
