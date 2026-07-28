@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace ArnaudDelgerie\TFSAppBundle\Command;
 
+use Symfony\Component\Console\Application;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -29,6 +30,7 @@ final class InitCommand extends Command
         $this->ensureBuildDir($projectDir, $io);
         $this->ensureGitignore($projectDir, $io);
         $this->ensureChangelog($projectDir, $io);
+        $this->ensureReadme($projectDir, $io);
 
         return Command::SUCCESS;
     }
@@ -152,6 +154,108 @@ final class InitCommand extends Command
         file_put_contents($changelogPath, $contents);
 
         $io->success(sprintf('Created %s', $changelogPath));
+    }
+
+    private function ensureReadme(string $projectDir, SymfonyStyle $io): void
+    {
+        $readmePath = $projectDir . '/TFSAPP_README.md';
+
+        if (is_file($readmePath)) {
+            $io->success(sprintf('%s already exists.', $readmePath));
+
+            return;
+        }
+
+        $identity = self::resolveIdentity($projectDir . '/tfsapp.config.json');
+
+        if (null === $identity) {
+            $io->warning(sprintf('Could not resolve product_name/identifier from %s/tfsapp.config.json; skipping TFSAPP_README.md.', $projectDir));
+
+            return;
+        }
+
+        [$productName, $identifier] = $identity;
+
+        $contents = '# ' . $productName . \PHP_EOL
+            . \PHP_EOL
+            . '`' . $identifier . '` — managed by TFSAppWorkstation; see its `CONTRACT.md` for the station ↔ project contract.' . \PHP_EOL
+            . \PHP_EOL
+            . '## Subcommands' . \PHP_EOL
+            . \PHP_EOL
+            . self::renderSubcommands($this->getApplication())
+            . \PHP_EOL
+            . '## Optional config fields' . \PHP_EOL
+            . \PHP_EOL
+            . '`tfsapp:init` does not scaffold `actions` beyond its all-`false` skeleton, nor `run`, `app_port`, `icon_path`, or `splash_*` — add these to `tfsapp.config.json` by hand when needed.' . \PHP_EOL;
+
+        file_put_contents($readmePath, $contents);
+
+        $io->success(sprintf('Created %s', $readmePath));
+    }
+
+    /**
+     * @return array{0: string, 1: string}|null
+     */
+    private static function resolveIdentity(string $configPath): ?array
+    {
+        if (!is_file($configPath)) {
+            return null;
+        }
+
+        $contents = file_get_contents($configPath);
+
+        if (false === $contents) {
+            return null;
+        }
+
+        try {
+            $config = json_decode($contents, true, flags: \JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            return null;
+        }
+
+        if (!\is_array($config)
+            || !isset($config['product_name'], $config['identifier'])
+            || !\is_string($config['product_name'])
+            || !\is_string($config['identifier'])
+        ) {
+            return null;
+        }
+
+        return [$config['product_name'], $config['identifier']];
+    }
+
+    private static function renderSubcommands(?Application $application): string
+    {
+        if (null === $application) {
+            return '_No subcommands registered._' . \PHP_EOL;
+        }
+
+        $descriptions = [];
+
+        foreach ($application->all() as $name => $command) {
+            $name = (string) $name;
+
+            if (!str_starts_with($name, 'tfsapp:')) {
+                continue;
+            }
+
+            $descriptions[$name] = $command->getDescription();
+        }
+
+        if ([] === $descriptions) {
+            return '_No subcommands registered._' . \PHP_EOL;
+        }
+
+        ksort($descriptions);
+
+        $lines = [];
+
+        foreach ($descriptions as $name => $description) {
+            $lines[] = sprintf('- `%s` — %s', $name, $description);
+        }
+
+        return implode(\PHP_EOL, $lines) . \PHP_EOL;
     }
 
     private static function resolveAppVersion(string $configPath): ?string
