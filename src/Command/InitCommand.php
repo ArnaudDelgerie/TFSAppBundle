@@ -57,6 +57,8 @@ final class InitCommand extends Command
             $config['releases_repo'] = $releasesRepo;
         }
 
+        $config['commands'] = self::buildCommands($projectDir);
+
         file_put_contents(
             $configPath,
             json_encode($config, \JSON_PRETTY_PRINT | \JSON_UNESCAPED_SLASHES) . \PHP_EOL,
@@ -127,5 +129,64 @@ final class InitCommand extends Command
         }
 
         return $answer;
+    }
+
+    /**
+     * @return array<string, list<string>>
+     */
+    private static function buildCommands(string $projectDir): array
+    {
+        $commands = [
+            'pre-build' => [
+                'composer install --no-dev --no-scripts --optimize-autoloader',
+                'php bin/console cache:clear --env=prod --no-debug',
+                'php bin/console cache:warmup --env=prod --no-debug',
+            ],
+            'post-build' => [
+                'composer install',
+            ],
+        ];
+
+        if (self::isPackageInstalled($projectDir, 'doctrine/doctrine-migrations-bundle')) {
+            $commands['pre-install'] = ['doctrine:migrations:migrate --no-interaction'];
+            $commands['pre-update'] = ['doctrine:migrations:migrate --no-interaction'];
+        }
+
+        return $commands;
+    }
+
+    private static function isPackageInstalled(string $projectDir, string $packageName): bool
+    {
+        $lockPath = $projectDir . '/composer.lock';
+
+        if (!is_file($lockPath)) {
+            return false;
+        }
+
+        $contents = file_get_contents($lockPath);
+
+        if (false === $contents) {
+            return false;
+        }
+
+        try {
+            $lock = json_decode($contents, true, flags: \JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            return false;
+        }
+
+        if (!\is_array($lock)) {
+            return false;
+        }
+
+        foreach (['packages', 'packages-dev'] as $section) {
+            foreach ($lock[$section] ?? [] as $package) {
+                if (\is_array($package) && ($package['name'] ?? null) === $packageName) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 }
