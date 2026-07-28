@@ -43,6 +43,7 @@ final class InitCommandTest extends TestCase
             'identifier' => 'dev.local.demo-project',
             'app_version' => '0.1.0',
             'commands' => self::buildCommands(),
+            'actions' => self::actionsSkeleton(),
         ], $this->readConfig());
     }
 
@@ -61,6 +62,7 @@ final class InitCommandTest extends TestCase
             'identifier' => 'com.example.customapp',
             'app_version' => '2.3.4',
             'commands' => self::buildCommands(),
+            'actions' => self::actionsSkeleton(),
         ], $this->readConfig());
     }
 
@@ -79,6 +81,7 @@ final class InitCommandTest extends TestCase
             'identifier' => 'dev.local.goodname',
             'app_version' => '1.2.3',
             'commands' => self::buildCommands(),
+            'actions' => self::actionsSkeleton(),
         ], $this->readConfig());
     }
 
@@ -184,6 +187,17 @@ final class InitCommandTest extends TestCase
         self::assertSame(self::buildCommands(withMigrations: true), $this->readConfig()['commands']);
     }
 
+    public function testActionsSkeletonIsWrittenAllFalse(): void
+    {
+        $tester = $this->createTester('project');
+
+        $tester->setInputs(['', '', '', '', '', '']);
+        $tester->execute([]);
+
+        self::assertSame(0, $tester->getStatusCode());
+        self::assertSame(self::actionsSkeleton(), $this->readConfig()['actions']);
+    }
+
     public function testExistingFileIsLeftUntouchedAndNoPromptsAreShown(): void
     {
         $tester = $this->createTester('project');
@@ -242,6 +256,21 @@ final class InitCommandTest extends TestCase
         }
 
         return $commands;
+    }
+
+    private static function actionsSkeleton(): array
+    {
+        return [
+            'secrets' => [
+                'ipc' => false,
+                'bridge' => false,
+                'keys' => [],
+            ],
+            'update' => [
+                'ipc' => false,
+                'bridge' => false,
+            ],
+        ];
     }
 
     private function readConfig(): array

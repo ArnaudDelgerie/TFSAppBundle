@@ -58,6 +58,7 @@ final class InitCommand extends Command
         }
 
         $config['commands'] = self::buildCommands($projectDir);
+        $config['actions'] = self::actionsSkeleton();
 
         file_put_contents(
             $configPath,
@@ -188,5 +189,23 @@ final class InitCommand extends Command
         }
 
         return false;
+    }
+
+    /**
+     * @return array<string, array<string, bool|list<string>>>
+     */
+    private static function actionsSkeleton(): array
+    {
+        return [
+            'secrets' => [
+                'ipc' => false,
+                'bridge' => false,
+                'keys' => [],
+            ],
+            'update' => [
+                'ipc' => false,
+                'bridge' => false,
+            ],
+        ];
     }
 }
