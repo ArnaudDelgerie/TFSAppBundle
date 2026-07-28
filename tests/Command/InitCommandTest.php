@@ -212,6 +212,72 @@ final class InitCommandTest extends TestCase
         self::assertSame(Command::SUCCESS, $tester->getStatusCode());
         self::assertStringNotContainsString('project_name', $tester->getDisplay());
         self::assertSame($original, file_get_contents($configPath));
+        self::assertDirectoryExists($this->projectRoot . '/tfsapp_build');
+        self::assertSame('/tfsapp_build/' . \PHP_EOL, file_get_contents($this->projectRoot . '/.gitignore'));
+    }
+
+    public function testBuildDirAndGitignoreAreCreatedOnFreshProject(): void
+    {
+        $tester = $this->createTester('project');
+
+        $tester->setInputs(['', '', '', '', '', '']);
+        $tester->execute([]);
+
+        self::assertSame(Command::SUCCESS, $tester->getStatusCode());
+        self::assertDirectoryExists($this->projectRoot . '/tfsapp_build');
+        self::assertSame('/tfsapp_build/' . \PHP_EOL, file_get_contents($this->projectRoot . '/.gitignore'));
+    }
+
+    public function testGitignoreEntryIsAppendedOncePreservingExistingLines(): void
+    {
+        $tester = $this->createTester('project');
+
+        $gitignorePath = $this->projectRoot . '/.gitignore';
+        file_put_contents($gitignorePath, '/vendor/' . \PHP_EOL);
+
+        $tester->setInputs(['', '', '', '', '', '']);
+        $tester->execute([]);
+
+        self::assertSame(Command::SUCCESS, $tester->getStatusCode());
+        self::assertSame(
+            '/vendor/' . \PHP_EOL . '/tfsapp_build/' . \PHP_EOL,
+            file_get_contents($gitignorePath),
+        );
+    }
+
+    public function testSecondRunLeavesBuildDirAndGitignoreEntryUntouchedWithoutDuplicate(): void
+    {
+        $tester = $this->createTester('project');
+
+        $tester->setInputs(['', '', '', '', '', '']);
+        $tester->execute([]);
+
+        self::assertSame(Command::SUCCESS, $tester->getStatusCode());
+
+        $gitignoreAfterFirstRun = file_get_contents($this->projectRoot . '/.gitignore');
+
+        $secondTester = new CommandTester((new Application($this->kernel))->find('tfsapp:init'));
+        $secondTester->execute([]);
+
+        self::assertSame(Command::SUCCESS, $secondTester->getStatusCode());
+        self::assertDirectoryExists($this->projectRoot . '/tfsapp_build');
+        self::assertSame($gitignoreAfterFirstRun, file_get_contents($this->projectRoot . '/.gitignore'));
+        self::assertSame(1, substr_count($gitignoreAfterFirstRun, '/tfsapp_build/'));
+    }
+
+    public function testGitignoreNeverIgnoresTheConfigFile(): void
+    {
+        $tester = $this->createTester('project');
+
+        $tester->setInputs(['', '', '', '', '', '']);
+        $tester->execute([]);
+
+        self::assertSame(Command::SUCCESS, $tester->getStatusCode());
+
+        $gitignoreLines = array_map('trim', (array) preg_split('/\R/', (string) file_get_contents($this->projectRoot . '/.gitignore')));
+
+        self::assertNotContains('tfsapp.config.json', $gitignoreLines);
+        self::assertNotContains('/tfsapp.config.json', $gitignoreLines);
     }
 
     private function createTester(string $rootBasename): CommandTester
