@@ -13,6 +13,7 @@ use ArnaudDelgerie\TFSAppBundle\EventListener\HealthzListener;
 use ArnaudDelgerie\TFSAppBundle\StationContext\StationContext;
 use ArnaudDelgerie\TFSAppBundle\StationContext\StationContextFactory;
 use ArnaudDelgerie\TFSAppBundle\StationContext\StationContextInterface;
+use ArnaudDelgerie\TFSAppBundle\Twig\TfsAppTwigGlobal;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 
 use function Symfony\Component\DependencyInjection\Loader\Configurator\service;
@@ -65,4 +66,8 @@ return static function (ContainerConfigurator $container): void {
 
     $container->services()
         ->alias(UpdateCheckerInterface::class, UpdateChecker::class);
+
+    $container->services()
+        ->set(TfsAppTwigGlobal::class)
+        ->autowire();
 };
