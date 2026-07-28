@@ -39,12 +39,26 @@ final class InitCommand extends Command
         $identifier = $io->ask('identifier', 'dev.local.' . $projectName, self::identifierValidator(...));
         $appVersion = $io->ask('app_version', '0.1.0', self::appVersionValidator(...));
 
+        $asyncWorker = $io->confirm('async_worker', false);
+        $releasesRepo = $io->ask('releases_repo', '', self::releasesRepoValidator(...));
+
         $config = [
             'project_name' => $projectName,
             'product_name' => $productName,
             'identifier' => $identifier,
             'app_version' => $appVersion,
         ];
+
+        if ($asyncWorker) {
+            $config['async_worker'] = true;
+        }
+
+        if ('' !== $releasesRepo) {
+            $config['releases_repo'] = $releasesRepo;
+        }
+
+        $config['commands'] = self::buildCommands($projectDir);
+        $config['actions'] = self::actionsSkeleton();
 
         file_put_contents(
             $configPath,
@@ -103,5 +117,95 @@ final class InitCommand extends Command
         }
 
         return $answer;
+    }
+
+    private static function releasesRepoValidator(?string $answer): string
+    {
+        if (null === $answer || '' === $answer) {
+            return '';
+        }
+
+        if (preg_match('/^[A-Za-z0-9._-]+(?:\/[A-Za-z0-9._-]+)?$/', $answer) !== 1) {
+            throw new \InvalidArgumentException('releases_repo must be a bare repo name or an owner/repo pair (e.g. myapp or myorg/myapp).');
+        }
+
+        return $answer;
+    }
+
+    /**
+     * @return array<string, list<string>>
+     */
+    private static function buildCommands(string $projectDir): array
+    {
+        $commands = [
+            'pre-build' => [
+                'composer install --no-dev --no-scripts --optimize-autoloader',
+                'php bin/console cache:clear --env=prod --no-debug',
+                'php bin/console cache:warmup --env=prod --no-debug',
+            ],
+            'post-build' => [
+                'composer install',
+            ],
+        ];
+
+        if (self::isPackageInstalled($projectDir, 'doctrine/doctrine-migrations-bundle')) {
+            $commands['pre-install'] = ['doctrine:migrations:migrate --no-interaction'];
+            $commands['pre-update'] = ['doctrine:migrations:migrate --no-interaction'];
+        }
+
+        return $commands;
+    }
+
+    private static function isPackageInstalled(string $projectDir, string $packageName): bool
+    {
+        $lockPath = $projectDir . '/composer.lock';
+
+        if (!is_file($lockPath)) {
+            return false;
+        }
+
+        $contents = file_get_contents($lockPath);
+
+        if (false === $contents) {
+            return false;
+        }
+
+        try {
+            $lock = json_decode($contents, true, flags: \JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            return false;
+        }
+
+        if (!\is_array($lock)) {
+            return false;
+        }
+
+        foreach (['packages', 'packages-dev'] as $section) {
+            foreach ($lock[$section] ?? [] as $package) {
+                if (\is_array($package) && ($package['name'] ?? null) === $packageName) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @return array<string, array<string, bool|list<string>>>
+     */
+    private static function actionsSkeleton(): array
+    {
+        return [
+            'secrets' => [
+                'ipc' => false,
+                'bridge' => false,
+                'keys' => [],
+            ],
+            'update' => [
+                'ipc' => false,
+                'bridge' => false,
+            ],
+        ];
     }
 }

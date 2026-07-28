@@ -32,7 +32,7 @@ final class InitCommandTest extends TestCase
     {
         $tester = $this->createTester('Demo Project');
 
-        $tester->setInputs(['', '', '', '']);
+        $tester->setInputs(['', '', '', '', '', '']);
         $tester->execute([]);
 
         self::assertSame(0, $tester->getStatusCode());
@@ -42,6 +42,8 @@ final class InitCommandTest extends TestCase
             'product_name' => 'Demo Project',
             'identifier' => 'dev.local.demo-project',
             'app_version' => '0.1.0',
+            'commands' => self::buildCommands(),
+            'actions' => self::actionsSkeleton(),
         ], $this->readConfig());
     }
 
@@ -49,7 +51,7 @@ final class InitCommandTest extends TestCase
     {
         $tester = $this->createTester('project');
 
-        $tester->setInputs(['custom_app', 'Custom App Name', 'com.example.customapp', '2.3.4']);
+        $tester->setInputs(['custom_app', 'Custom App Name', 'com.example.customapp', '2.3.4', '', '']);
         $tester->execute([]);
 
         self::assertSame(0, $tester->getStatusCode());
@@ -59,6 +61,8 @@ final class InitCommandTest extends TestCase
             'product_name' => 'Custom App Name',
             'identifier' => 'com.example.customapp',
             'app_version' => '2.3.4',
+            'commands' => self::buildCommands(),
+            'actions' => self::actionsSkeleton(),
         ], $this->readConfig());
     }
 
@@ -66,7 +70,7 @@ final class InitCommandTest extends TestCase
     {
         $tester = $this->createTester('project');
 
-        $tester->setInputs(['bad name', 'goodname', '', '', '01.2.3', '1.2.3']);
+        $tester->setInputs(['bad name', 'goodname', '', '', '01.2.3', '1.2.3', '', '']);
         $tester->execute([]);
 
         self::assertSame(0, $tester->getStatusCode());
@@ -76,7 +80,122 @@ final class InitCommandTest extends TestCase
             'product_name' => 'Goodname',
             'identifier' => 'dev.local.goodname',
             'app_version' => '1.2.3',
+            'commands' => self::buildCommands(),
+            'actions' => self::actionsSkeleton(),
         ], $this->readConfig());
+    }
+
+    public function testAsyncWorkerYesAddsKey(): void
+    {
+        $tester = $this->createTester('project');
+
+        $tester->setInputs(['', '', '', '', 'yes', '']);
+        $tester->execute([]);
+
+        self::assertSame(0, $tester->getStatusCode());
+        self::assertSame(true, $this->readConfig()['async_worker']);
+    }
+
+    public function testAsyncWorkerNoOmitsKey(): void
+    {
+        $tester = $this->createTester('project');
+
+        $tester->setInputs(['', '', '', '', 'no', '']);
+        $tester->execute([]);
+
+        self::assertSame(0, $tester->getStatusCode());
+        self::assertArrayNotHasKey('async_worker', $this->readConfig());
+    }
+
+    public function testReleasesRepoProvidedIsWritten(): void
+    {
+        $tester = $this->createTester('project');
+
+        $tester->setInputs(['', '', '', '', '', 'myorg/myapp']);
+        $tester->execute([]);
+
+        self::assertSame(0, $tester->getStatusCode());
+        self::assertSame('myorg/myapp', $this->readConfig()['releases_repo']);
+    }
+
+    public function testReleasesRepoEmptyOmitsKey(): void
+    {
+        $tester = $this->createTester('project');
+
+        $tester->setInputs(['', '', '', '', '', '']);
+        $tester->execute([]);
+
+        self::assertSame(0, $tester->getStatusCode());
+        self::assertArrayNotHasKey('releases_repo', $this->readConfig());
+    }
+
+    public function testReleasesRepoMalformedIsReaskedThenAccepted(): void
+    {
+        $tester = $this->createTester('project');
+
+        $tester->setInputs(['', '', '', '', '', 'bad repo!', 'myorg/myapp']);
+        $tester->execute([]);
+
+        self::assertSame(0, $tester->getStatusCode());
+        self::assertSame('myorg/myapp', $this->readConfig()['releases_repo']);
+    }
+
+    public function testCommandsScaffoldOmitsMigrationHooksWithoutDoctrine(): void
+    {
+        $tester = $this->createTester('project');
+
+        $tester->setInputs(['', '', '', '', '', '']);
+        $tester->execute([]);
+
+        self::assertSame(0, $tester->getStatusCode());
+        self::assertSame(self::buildCommands(), $this->readConfig()['commands']);
+    }
+
+    public function testCommandsScaffoldAddsMigrationHooksWithDoctrineInstalled(): void
+    {
+        $tester = $this->createTester('project');
+        $this->writeComposerLock(['doctrine/doctrine-migrations-bundle']);
+
+        $tester->setInputs(['', '', '', '', '', '']);
+        $tester->execute([]);
+
+        self::assertSame(0, $tester->getStatusCode());
+        self::assertSame(self::buildCommands(withMigrations: true), $this->readConfig()['commands']);
+    }
+
+    public function testCommandsScaffoldOmitsMigrationHooksWithMalformedComposerLock(): void
+    {
+        $tester = $this->createTester('project');
+        file_put_contents($this->projectRoot . '/composer.lock', '{not valid json');
+
+        $tester->setInputs(['', '', '', '', '', '']);
+        $tester->execute([]);
+
+        self::assertSame(0, $tester->getStatusCode());
+        self::assertSame(self::buildCommands(), $this->readConfig()['commands']);
+    }
+
+    public function testCommandsScaffoldAddsMigrationHooksWhenDoctrineInPackagesDev(): void
+    {
+        $tester = $this->createTester('project');
+        $this->writeComposerLock([], ['doctrine/doctrine-migrations-bundle']);
+
+        $tester->setInputs(['', '', '', '', '', '']);
+        $tester->execute([]);
+
+        self::assertSame(0, $tester->getStatusCode());
+        self::assertSame(self::buildCommands(withMigrations: true), $this->readConfig()['commands']);
+    }
+
+    public function testActionsSkeletonIsWrittenAllFalse(): void
+    {
+        $tester = $this->createTester('project');
+
+        $tester->setInputs(['', '', '', '', '', '']);
+        $tester->execute([]);
+
+        self::assertSame(0, $tester->getStatusCode());
+        self::assertSame(self::actionsSkeleton(), $this->readConfig()['actions']);
     }
 
     public function testExistingFileIsLeftUntouchedAndNoPromptsAreShown(): void
@@ -106,6 +225,52 @@ final class InitCommandTest extends TestCase
         $application->setAutoExit(false);
 
         return new CommandTester($application->find('tfsapp:init'));
+    }
+
+    private function writeComposerLock(array $packages = [], array $packagesDev = []): void
+    {
+        $lock = [
+            'packages' => array_map(static fn (string $name): array => ['name' => $name], $packages),
+            'packages-dev' => array_map(static fn (string $name): array => ['name' => $name], $packagesDev),
+        ];
+
+        file_put_contents($this->projectRoot . '/composer.lock', json_encode($lock, \JSON_PRETTY_PRINT) . \PHP_EOL);
+    }
+
+    private static function buildCommands(bool $withMigrations = false): array
+    {
+        $commands = [
+            'pre-build' => [
+                'composer install --no-dev --no-scripts --optimize-autoloader',
+                'php bin/console cache:clear --env=prod --no-debug',
+                'php bin/console cache:warmup --env=prod --no-debug',
+            ],
+            'post-build' => [
+                'composer install',
+            ],
+        ];
+
+        if ($withMigrations) {
+            $commands['pre-install'] = ['doctrine:migrations:migrate --no-interaction'];
+            $commands['pre-update'] = ['doctrine:migrations:migrate --no-interaction'];
+        }
+
+        return $commands;
+    }
+
+    private static function actionsSkeleton(): array
+    {
+        return [
+            'secrets' => [
+                'ipc' => false,
+                'bridge' => false,
+                'keys' => [],
+            ],
+            'update' => [
+                'ipc' => false,
+                'bridge' => false,
+            ],
+        ];
     }
 
     private function readConfig(): array
