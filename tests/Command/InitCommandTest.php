@@ -331,6 +331,68 @@ final class InitCommandTest extends TestCase
         self::assertSame($afterFirstRun, file_get_contents($changelogPath));
     }
 
+    public function testReadmeIsCreatedWithIdentityHeaderAndSubcommandsSection(): void
+    {
+        $tester = $this->createTester('project', registerDummyCommand: true);
+
+        $tester->setInputs(['', '', '', '', '', '']);
+        $tester->execute([]);
+
+        self::assertSame(Command::SUCCESS, $tester->getStatusCode());
+
+        $readmePath = $this->projectRoot . '/TFSAPP_README.md';
+        self::assertFileExists($readmePath);
+
+        $contents = file_get_contents($readmePath);
+
+        self::assertStringContainsString('# Project' . \PHP_EOL, $contents);
+        self::assertStringContainsString('`dev.local.project`', $contents);
+        self::assertStringContainsString('managed by TFSAppWorkstation', $contents);
+        self::assertStringContainsString('## Subcommands' . \PHP_EOL, $contents);
+        self::assertStringContainsString('- `tfsapp:init` — Generate tfsapp.config.json at the project root', $contents);
+        self::assertStringContainsString('- `tfsapp:demo` — Demo subcommand for tests', $contents);
+        self::assertStringContainsString('## Optional config fields' . \PHP_EOL, $contents);
+        self::assertStringContainsString('`actions`', $contents);
+        self::assertStringContainsString('`run`', $contents);
+        self::assertStringContainsString('`app_port`', $contents);
+        self::assertStringContainsString('`icon_path`', $contents);
+        self::assertStringContainsString('`splash_*`', $contents);
+    }
+
+    public function testExistingReadmeIsLeftUntouched(): void
+    {
+        $tester = $this->createTester('project');
+
+        $readmePath = $this->projectRoot . '/TFSAPP_README.md';
+        $original = '# Something else' . \PHP_EOL;
+        file_put_contents($readmePath, $original);
+
+        $tester->setInputs(['', '', '', '', '', '']);
+        $tester->execute([]);
+
+        self::assertSame(Command::SUCCESS, $tester->getStatusCode());
+        self::assertSame($original, file_get_contents($readmePath));
+    }
+
+    public function testSecondRunLeavesReadmeUntouched(): void
+    {
+        $tester = $this->createTester('project');
+
+        $tester->setInputs(['', '', '', '', '', '']);
+        $tester->execute([]);
+
+        self::assertSame(Command::SUCCESS, $tester->getStatusCode());
+
+        $readmePath = $this->projectRoot . '/TFSAPP_README.md';
+        $afterFirstRun = file_get_contents($readmePath);
+
+        $secondTester = new CommandTester((new Application($this->kernel))->find('tfsapp:init'));
+        $secondTester->execute([]);
+
+        self::assertSame(Command::SUCCESS, $secondTester->getStatusCode());
+        self::assertSame($afterFirstRun, file_get_contents($readmePath));
+    }
+
     public function testChangelogIsSkippedWithWarningWhenConfigIsMalformed(): void
     {
         $tester = $this->createTester('project');
@@ -345,7 +407,7 @@ final class InitCommandTest extends TestCase
         self::assertStringContainsString('Could not resolve app_version', $tester->getDisplay());
     }
 
-    private function createTester(string $rootBasename): CommandTester
+    private function createTester(string $rootBasename, bool $registerDummyCommand = false): CommandTester
     {
         $this->projectRoot = $this->baseDir . '/' . $rootBasename;
         mkdir($this->projectRoot, 0777, true);
@@ -355,6 +417,10 @@ final class InitCommandTest extends TestCase
 
         $application = new Application($this->kernel);
         $application->setAutoExit(false);
+
+        if ($registerDummyCommand) {
+            $application->addCommand(new DummyTfsAppCommand());
+        }
 
         return new CommandTester($application->find('tfsapp:init'));
     }
