@@ -333,7 +333,7 @@ final class InitCommandTest extends TestCase
 
     public function testReadmeIsCreatedWithIdentityHeaderAndSubcommandsSection(): void
     {
-        $tester = $this->createTester('project', registerDummyCommand: true);
+        $tester = $this->createTester('project');
 
         $tester->setInputs(['', '', '', '', '', '']);
         $tester->execute([]);
@@ -349,8 +349,16 @@ final class InitCommandTest extends TestCase
         self::assertStringContainsString('`dev.local.project`', $contents);
         self::assertStringContainsString('managed by TFSAppWorkstation', $contents);
         self::assertStringContainsString('## Subcommands' . \PHP_EOL, $contents);
-        self::assertStringContainsString('- `tfsapp:init` — Generate tfsapp.config.json at the project root', $contents);
-        self::assertStringContainsString('- `tfsapp:demo` — Demo subcommand for tests', $contents);
+        self::assertStringContainsString('Packaged only', $contents);
+        self::assertStringContainsString('- `--version`', $contents);
+        self::assertStringContainsString('- `--update`', $contents);
+        self::assertStringContainsString('- `--rollback`', $contents);
+        self::assertStringContainsString('- `--uninstall [--purge]`', $contents);
+        self::assertStringContainsString('- `--export <path>`', $contents);
+        self::assertStringContainsString('- `--import <path>`', $contents);
+        self::assertStringContainsString('- `run <alias> [args...]`', $contents);
+        self::assertStringContainsString('- `--yes` / `-y`', $contents);
+        self::assertStringContainsString('./<app>.AppImage --help', $contents);
         self::assertStringContainsString('## Optional config fields' . \PHP_EOL, $contents);
         self::assertStringContainsString('`actions`', $contents);
         self::assertStringContainsString('`run`', $contents);
@@ -407,7 +415,7 @@ final class InitCommandTest extends TestCase
         self::assertStringContainsString('Could not resolve app_version', $tester->getDisplay());
     }
 
-    private function createTester(string $rootBasename, bool $registerDummyCommand = false): CommandTester
+    private function createTester(string $rootBasename): CommandTester
     {
         $this->projectRoot = $this->baseDir . '/' . $rootBasename;
         mkdir($this->projectRoot, 0777, true);
@@ -417,10 +425,6 @@ final class InitCommandTest extends TestCase
 
         $application = new Application($this->kernel);
         $application->setAutoExit(false);
-
-        if ($registerDummyCommand) {
-            $application->addCommand(new DummyTfsAppCommand());
-        }
 
         return new CommandTester($application->find('tfsapp:init'));
     }

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace ArnaudDelgerie\TFSAppBundle\Command;
 
-use Symfony\Component\Console\Application;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -182,7 +181,9 @@ final class InitCommand extends Command
             . \PHP_EOL
             . '## Subcommands' . \PHP_EOL
             . \PHP_EOL
-            . self::renderSubcommands($this->getApplication())
+            . 'Packaged only: run these against the built `./<app>.AppImage`, not `bin/console` — in dev mode each one just prints that and exits `2`.' . \PHP_EOL
+            . \PHP_EOL
+            . self::renderSubcommands()
             . \PHP_EOL
             . '## Optional config fields' . \PHP_EOL
             . \PHP_EOL
@@ -225,35 +226,21 @@ final class InitCommand extends Command
         return [$config['product_name'], $config['identifier']];
     }
 
-    private static function renderSubcommands(?Application $application): string
+    private static function renderSubcommands(): string
     {
-        if (null === $application) {
-            return '_No subcommands registered._' . \PHP_EOL;
-        }
-
-        $descriptions = [];
-
-        foreach ($application->all() as $name => $command) {
-            $name = (string) $name;
-
-            if (!str_starts_with($name, 'tfsapp:')) {
-                continue;
-            }
-
-            $descriptions[$name] = $command->getDescription();
-        }
-
-        if ([] === $descriptions) {
-            return '_No subcommands registered._' . \PHP_EOL;
-        }
-
-        ksort($descriptions);
-
-        $lines = [];
-
-        foreach ($descriptions as $name => $description) {
-            $lines[] = sprintf('- `%s` — %s', $name, $description);
-        }
+        $lines = [
+            '- `--version` — print the running version and the rollback target.',
+            '- `--help` — print usage and the full subcommand list.',
+            '- `--update` — update the installed app to the latest release.',
+            '- `--rollback` — undo the last update.',
+            '- `--uninstall [--purge]` — remove the app\'s data (and, with `--purge`, its keyring entries too).',
+            '- `--export <path>` — write a backup (database, version, manifest) to `<path>`.',
+            '- `--import <path>` — seed a fresh install\'s data from a backup made with `--export`.',
+            '- `run <alias> [args...]` — run one of this app\'s named `bin/console` aliases in the foreground.',
+            '- `--yes` / `-y` — skip the confirmation prompt on `--update`, `--rollback`, `--uninstall`.',
+            '',
+            'This list can drift from the packaged build over time; `./<app>.AppImage --help` is the authoritative one.',
+        ];
 
         return implode(\PHP_EOL, $lines) . \PHP_EOL;
     }
