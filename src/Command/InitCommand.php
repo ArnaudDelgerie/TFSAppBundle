@@ -47,13 +47,13 @@ final class InitCommand extends Command
 
         $defaultProjectName = self::slugify(basename($projectDir));
 
-        $projectName = $io->ask('project_name', $defaultProjectName, self::projectNameValidator(...));
-        $productName = $io->ask('product_name', self::humanize($projectName), self::productNameValidator(...));
-        $identifier = $io->ask('identifier', 'dev.local.' . $projectName, self::identifierValidator(...));
-        $appVersion = $io->ask('app_version', '0.1.0', self::appVersionValidator(...));
+        $projectName = $io->ask('project_name (lowercase slug, e.g. "my-app")', $defaultProjectName, self::projectNameValidator(...));
+        $productName = $io->ask('product_name (free-form display name, e.g. "My App")', self::humanize($projectName), self::productNameValidator(...));
+        $identifier = $io->ask('identifier (lowercase reverse-domain, e.g. "dev.local.my-app")', 'dev.local.' . $projectName, self::identifierValidator(...));
+        $appVersion = $io->ask('app_version (semver MAJOR.MINOR.PATCH, e.g. "1.2.3")', '0.1.0', self::appVersionValidator(...));
 
         $asyncWorker = $io->confirm('async_worker', false);
-        $releasesRepo = $io->ask('releases_repo', '', self::releasesRepoValidator(...));
+        $releasesRepo = $io->ask('releases_repo (bare name or owner/repo, e.g. "myorg/myapp"; leave empty to skip)', '', self::releasesRepoValidator(...));
 
         $config = [
             'project_name' => $projectName,
