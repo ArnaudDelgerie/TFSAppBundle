@@ -17,7 +17,9 @@ final class UpdateCheckerTest extends TestCase
     public function testOkBodyIsParsedIntoResult(): void
     {
         $checker = $this->checkerFor(static fn (): MockResponse => new MockResponse(
-            '{"status":"ok","current":"1.1.0","latest":"1.2.0","update_available":true,"release_url":"https://github.com/owner/repo/releases/tag/v1.2.0"}',
+            '{"status":"ok","current":"1.1.0","latest":"1.2.0","update_available":true,'
+            . '"release_url":"https://github.com/owner/repo/releases/tag/v1.2.0","notes":"Release notes.",'
+            . '"asset":{"name":"app_1.2.0_amd64.AppImage","url":"https://example.test/app_1.2.0_amd64.AppImage","size":123456}}',
             ['http_code' => 200],
         ));
 
@@ -28,6 +30,11 @@ final class UpdateCheckerTest extends TestCase
         self::assertSame('1.2.0', $result->latest());
         self::assertTrue($result->isUpdateAvailable());
         self::assertSame('https://github.com/owner/repo/releases/tag/v1.2.0', $result->releaseUrl());
+        self::assertSame('Release notes.', $result->notes());
+        self::assertSame(
+            ['name' => 'app_1.2.0_amd64.AppImage', 'url' => 'https://example.test/app_1.2.0_amd64.AppImage', 'size' => 123456],
+            $result->asset(),
+        );
     }
 
     public function testUnavailableBodyIsParsedIntoResult(): void
@@ -42,6 +49,8 @@ final class UpdateCheckerTest extends TestCase
         self::assertFalse($result->wasReached());
         self::assertFalse($result->isUpdateAvailable());
         self::assertSame('offline', $result->reason());
+        self::assertNull($result->notes());
+        self::assertNull($result->asset());
     }
 
     public function testGatedGroupThrowsUpdateNotEnabled(): void
