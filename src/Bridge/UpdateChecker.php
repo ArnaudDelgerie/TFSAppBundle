@@ -33,14 +33,13 @@ final class UpdateChecker implements UpdateCheckerInterface
          *     update_available?: bool,
          *     release_url?: string,
          *     notes?: string,
-         *     asset?: array{name: string, url: string, size: int},
          *     reason?: string,
          * } $data
          */
         $data = $response->toArray();
 
         return 'ok' === $data['status']
-            ? UpdateCheckResult::ok($data['current'], $data['latest'], $data['update_available'], $data['release_url'], $data['notes'], $data['asset'])
+            ? UpdateCheckResult::ok($data['current'], $data['latest'], $data['update_available'], $data['release_url'], $data['notes'])
             : UpdateCheckResult::unavailable($data['reason']);
     }
 }
