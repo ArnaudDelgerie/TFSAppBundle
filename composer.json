@@ -14,10 +14,12 @@
         "symfony/http-client": "^7.4|^8.0"
     },
     "require-dev": {
+        "doctrine/dbal": "^4.0",
         "phpunit/phpunit": "^11.0",
         "symfony/twig-bundle": "^7.4|^8.0"
     },
     "suggest": {
+        "doctrine/dbal": "To register the SQLite WAL/busy_timeout pragma middleware (sqlite_pragmas)",
         "symfony/twig-bundle": "To expose the tfsapp Twig global (station identity/capability flags for templates)"
     },
     "autoload": {

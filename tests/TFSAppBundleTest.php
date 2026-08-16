@@ -19,4 +19,15 @@ final class TFSAppBundleTest extends TestCase
         $kernel->shutdown();
         restore_exception_handler();
     }
+
+    public function testSqlitePragmasDefaultsToEnabled(): void
+    {
+        $kernel = new TestKernel('test', false);
+        $kernel->boot();
+
+        self::assertTrue($kernel->getContainer()->getParameter('tfsapp.sqlite_pragmas'));
+
+        $kernel->shutdown();
+        restore_exception_handler();
+    }
 }

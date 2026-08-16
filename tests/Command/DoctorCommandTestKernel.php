@@ -12,8 +12,10 @@ use Symfony\Component\HttpKernel\Kernel;
 
 final class DoctorCommandTestKernel extends Kernel
 {
-    public function __construct(private readonly string $projectDir)
-    {
+    public function __construct(
+        private readonly string $projectDir,
+        private readonly ?bool $sqlitePragmas = null,
+    ) {
         parent::__construct('test', false);
     }
 
@@ -30,6 +32,12 @@ final class DoctorCommandTestKernel extends Kernel
                 'test' => true,
                 'secret' => 'test',
             ]);
+
+            if (null !== $this->sqlitePragmas) {
+                $container->loadFromExtension('tfs_app', [
+                    'sqlite_pragmas' => $this->sqlitePragmas,
+                ]);
+            }
         });
     }
 

@@ -2,6 +2,7 @@
 
 namespace ArnaudDelgerie\TFSAppBundle;
 
+use ArnaudDelgerie\TFSAppBundle\DependencyInjection\Compiler\RegisterSqlitePragmaMiddlewarePass;
 use ArnaudDelgerie\TFSAppBundle\DependencyInjection\Compiler\RegisterTfsAppTwigGlobalPass;
 use Symfony\Component\Config\Definition\Configurator\DefinitionConfigurator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -15,6 +16,7 @@ final class TFSAppBundle extends AbstractBundle
         $definition->rootNode()
             ->children()
                 ->booleanNode('twig_globals')->defaultTrue()->end()
+                ->booleanNode('sqlite_pragmas')->defaultTrue()->end()
             ->end();
     }
 
@@ -23,6 +25,7 @@ final class TFSAppBundle extends AbstractBundle
         parent::build($container);
 
         $container->addCompilerPass(new RegisterTfsAppTwigGlobalPass());
+        $container->addCompilerPass(new RegisterSqlitePragmaMiddlewarePass());
     }
 
     public function loadExtension(array $config, ContainerConfigurator $container, ContainerBuilder $builder): void
@@ -30,5 +33,6 @@ final class TFSAppBundle extends AbstractBundle
         $container->import('../config/services.php');
 
         $builder->setParameter('tfsapp.twig_globals', $config['twig_globals']);
+        $builder->setParameter('tfsapp.sqlite_pragmas', $config['sqlite_pragmas']);
     }
 }
