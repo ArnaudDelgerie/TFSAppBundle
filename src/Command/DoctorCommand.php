@@ -36,6 +36,7 @@ final class DoctorCommand extends Command
             ['version', $this->context->version()],
             ['running_under_station', self::formatBool($this->context->isRunningUnderStation())],
             ['async_worker', self::formatBool($this->context->isAsyncWorker())],
+            ['worker_transports', implode(', ', $this->context->workerTransports()) ?: '(none)'],
             ['keyring_available', self::formatBool($this->context->isKeyringAvailable())],
             ['bridge_enabled', self::formatBool($this->context->isBridgeEnabled())],
             ['secrets_available', self::formatBool($this->secretStore->isAvailable())],

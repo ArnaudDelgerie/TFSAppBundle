@@ -31,6 +31,7 @@ final class DoctorCommandTest extends TestCase
         putenv('TFS_APP_IDENTIFIER');
         putenv('TFS_APP_VERSION');
         putenv('TFS_ASYNC_WORKER');
+        putenv('TFS_WORKER_TRANSPORTS');
         putenv('TFS_KEYRING_AVAILABLE');
         putenv('DATABASE_URL');
         unset($_SERVER['DATABASE_URL'], $_ENV['DATABASE_URL']);
@@ -43,6 +44,7 @@ final class DoctorCommandTest extends TestCase
         putenv('TFS_APP_IDENTIFIER=dev.local.demo-project');
         putenv('TFS_APP_VERSION=1.2.3');
         putenv('TFS_ASYNC_WORKER=1');
+        putenv('TFS_WORKER_TRANSPORTS=urgent,scheduled,background');
         putenv('TFS_KEYRING_AVAILABLE=1');
 
         $tester = $this->createTester();
@@ -55,6 +57,8 @@ final class DoctorCommandTest extends TestCase
         self::assertStringContainsString('1.2.3', $display);
         self::assertStringContainsString('keyring_available', $display);
         self::assertStringContainsString('async_worker', $display);
+        self::assertStringContainsString('worker_transports', $display);
+        self::assertStringContainsString('urgent, scheduled, background', $display);
         self::assertStringContainsString('bridge_enabled', $display);
     }
 
@@ -66,6 +70,8 @@ final class DoctorCommandTest extends TestCase
         self::assertSame(0, $tester->getStatusCode());
         self::assertStringContainsString('secrets_available', $tester->getDisplay());
         self::assertStringContainsString('update_check_available', $tester->getDisplay());
+        self::assertStringContainsString('worker_transports', $tester->getDisplay());
+        self::assertStringContainsString('(none)', $tester->getDisplay());
     }
 
     public function testDatabaseUrlNotSetIsReportedAsSuch(): void
