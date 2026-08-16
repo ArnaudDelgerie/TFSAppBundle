@@ -6,6 +6,7 @@ namespace ArnaudDelgerie\TFSAppBundle\Command;
 
 use ArnaudDelgerie\TFSAppBundle\Bridge\SecretStoreInterface;
 use ArnaudDelgerie\TFSAppBundle\Bridge\UpdateCheckerInterface;
+use ArnaudDelgerie\TFSAppBundle\Doctrine\SqlitePragmas;
 use ArnaudDelgerie\TFSAppBundle\StationContext\StationContextInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -104,12 +105,56 @@ final class DoctorCommand extends Command
 
         $rows[] = ['database_tables', $hasTables ? 'present' : 'none'];
 
+        [$pragmaRows, $pragmaWarning] = $this->inspectSqlitePragmas($path);
+        $rows = [...$rows, ...$pragmaRows];
+
         if (!$hasTables) {
             return [$rows, sprintf(
                 'SQLite database file %s exists but holds no tables — it may have been migrated against a'
                 . ' different DATABASE_URL (CONTRACT.md §3: dev-mode `bin/console` reads the project\'s own .env,'
                 . ' which can point at a different file than the one this process resolved above).',
                 $path,
+            )];
+        }
+
+        return [$rows, $pragmaWarning];
+    }
+
+    /**
+     * @return array{0: list<array{0: string, 1: string}>, 1: string|null}
+     */
+    private function inspectSqlitePragmas(string $path): array
+    {
+        $container = $this->kernel->getContainer();
+        $enabled = $container->hasParameter('tfsapp.sqlite_pragmas') && $container->getParameter('tfsapp.sqlite_pragmas');
+
+        if (!$enabled) {
+            return [[['sqlite_pragmas', 'disabled (sqlite_pragmas: false)']], null];
+        }
+
+        if (!\in_array('sqlite', \PDO::getAvailableDrivers(), true)) {
+            return [[['sqlite_journal_mode', 'unknown (pdo_sqlite unavailable)']], null];
+        }
+
+        try {
+            $pdo = new \PDO('sqlite:' . $path);
+            $journalMode = (string) $pdo->query('PRAGMA journal_mode')->fetchColumn();
+        } catch (\Throwable) {
+            return [[['sqlite_journal_mode', 'unknown (could not open the file)']], null];
+        }
+
+        $rows = [
+            ['sqlite_journal_mode', $journalMode],
+            ['sqlite_busy_timeout_ms', (string) SqlitePragmas::BUSY_TIMEOUT_MS],
+        ];
+
+        if ('wal' !== $journalMode) {
+            return [$rows, sprintf(
+                'SQLite database file %s is in "%s" journal mode, not WAL — SqlitePragmaDriver sets WAL on'
+                . ' connect, so this file has not yet been opened through Doctrine in this project. Until it is,'
+                . ' any writer (the async worker) blocks every reader (the web process) on this file.',
+                $path,
+                $journalMode,
             )];
         }
 

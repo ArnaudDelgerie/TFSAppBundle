@@ -156,6 +156,74 @@ final class DoctorCommandTest extends TestCase
         self::assertStringNotContainsString('does not exist', $display);
     }
 
+    public function testFreshSqliteFileReportsJournalModeAndBusyTimeout(): void
+    {
+        mkdir($this->projectRoot . '/var');
+        $dbPath = $this->projectRoot . '/var/data.db';
+        $pdo = new \PDO('sqlite:' . $dbPath);
+        $pdo->exec('PRAGMA journal_mode=WAL');
+        $pdo->exec('CREATE TABLE t (id INTEGER PRIMARY KEY)');
+
+        putenv('DATABASE_URL=sqlite:///%kernel.project_dir%/var/data.db');
+
+        $tester = $this->createTester();
+        $tester->execute([]);
+
+        self::assertSame(0, $tester->getStatusCode());
+        $display = $tester->getDisplay();
+
+        self::assertStringContainsString('sqlite_journal_mode', $display);
+        self::assertStringContainsString('wal', $display);
+        self::assertStringContainsString('sqlite_busy_timeout_ms', $display);
+        self::assertStringContainsString('5000', $display);
+        self::assertStringNotContainsString('not WAL', $display);
+    }
+
+    public function testSqliteFileNotYetInWalModeIsFlaggedWithAWarning(): void
+    {
+        mkdir($this->projectRoot . '/var');
+        $dbPath = $this->projectRoot . '/var/data.db';
+        $pdo = new \PDO('sqlite:' . $dbPath);
+        $pdo->exec('CREATE TABLE t (id INTEGER PRIMARY KEY)');
+
+        putenv('DATABASE_URL=sqlite:///%kernel.project_dir%/var/data.db');
+
+        $tester = $this->createTester();
+        $tester->execute([]);
+
+        self::assertSame(0, $tester->getStatusCode());
+        $display = $tester->getDisplay();
+
+        self::assertStringContainsString('sqlite_journal_mode', $display);
+        self::assertStringContainsString('not WAL', $display);
+    }
+
+    public function testSqlitePragmasDisabledIsReportedWithoutQueryingTheFile(): void
+    {
+        mkdir($this->projectRoot . '/var');
+        $dbPath = $this->projectRoot . '/var/data.db';
+        $pdo = new \PDO('sqlite:' . $dbPath);
+        $pdo->exec('CREATE TABLE t (id INTEGER PRIMARY KEY)');
+
+        putenv('DATABASE_URL=sqlite:///%kernel.project_dir%/var/data.db');
+
+        $this->kernel = new DoctorCommandTestKernel($this->projectRoot, false);
+        $this->kernel->boot();
+
+        $application = new Application($this->kernel);
+        $application->setAutoExit(false);
+
+        $tester = new CommandTester($application->find('tfsapp:doctor'));
+        $tester->execute([]);
+
+        self::assertSame(0, $tester->getStatusCode());
+        $display = $tester->getDisplay();
+
+        self::assertStringContainsString('sqlite_pragmas', $display);
+        self::assertStringContainsString('disabled', $display);
+        self::assertStringNotContainsString('sqlite_journal_mode', $display);
+    }
+
     public function testNoTemplatesDirDoesNotWarn(): void
     {
         $tester = $this->createTester();
