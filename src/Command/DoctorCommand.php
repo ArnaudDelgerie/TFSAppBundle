@@ -14,6 +14,7 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\HttpKernel\KernelInterface;
+use Symfony\Contracts\Service\ServiceCollectionInterface;
 
 #[AsCommand(name: 'tfsapp:doctor', description: 'Print the resolved station context and bridge availability')]
 final class DoctorCommand extends Command
@@ -23,6 +24,7 @@ final class DoctorCommand extends Command
         private readonly SecretStoreInterface $secretStore,
         private readonly UpdateCheckerInterface $updateChecker,
         private readonly KernelInterface $kernel,
+        private readonly ?ServiceCollectionInterface $receiverLocator = null,
     ) {
         parent::__construct();
     }
@@ -51,9 +53,34 @@ final class DoctorCommand extends Command
             $io->warning($databaseWarning);
         }
 
+        $this->warnMissingWorkerTransports($io);
         $this->warnOffOriginAssets($io);
 
         return Command::SUCCESS;
+    }
+
+    private function warnMissingWorkerTransports(SymfonyStyle $io): void
+    {
+        $consumedTransports = $this->context->workerTransports();
+
+        if (null === $this->receiverLocator || [] === $consumedTransports) {
+            return;
+        }
+
+        $missingTransports = array_values(array_diff(
+            $consumedTransports,
+            array_keys($this->receiverLocator->getProvidedServices()),
+        ));
+
+        if ([] === $missingTransports) {
+            return;
+        }
+
+        $io->warning(sprintf(
+            'The hub is running messenger:consume on transport(s) this app does not configure: %s. '
+            . 'Those consumers exit immediately, so the hub gives up on them after a few retries.',
+            implode(', ', $missingTransports),
+        ));
     }
 
     /**

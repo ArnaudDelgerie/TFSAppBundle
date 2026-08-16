@@ -8,6 +8,7 @@ use ArnaudDelgerie\TFSAppBundle\TFSAppBundle;
 use Symfony\Bundle\FrameworkBundle\FrameworkBundle;
 use Symfony\Component\Config\Loader\LoaderInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
+use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\HttpKernel\Kernel;
 
 final class DoctorCommandTestKernel extends Kernel
@@ -15,6 +16,7 @@ final class DoctorCommandTestKernel extends Kernel
     public function __construct(
         private readonly string $projectDir,
         private readonly ?bool $sqlitePragmas = null,
+        private readonly ?array $receiverTransports = null,
     ) {
         parent::__construct('test', false);
     }
@@ -37,6 +39,13 @@ final class DoctorCommandTestKernel extends Kernel
                 $container->loadFromExtension('tfs_app', [
                     'sqlite_pragmas' => $this->sqlitePragmas,
                 ]);
+            }
+
+            if (null !== $this->receiverTransports) {
+                $container->setDefinition('messenger.receiver_locator', new Definition(
+                    TestReceiverLocator::class,
+                    [$this->receiverTransports],
+                ));
             }
         });
     }

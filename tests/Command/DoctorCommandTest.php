@@ -74,6 +74,40 @@ final class DoctorCommandTest extends TestCase
         self::assertStringContainsString('(none)', $tester->getDisplay());
     }
 
+    public function testDefinedWorkerTransportsDoNotWarn(): void
+    {
+        putenv('TFS_WORKER_TRANSPORTS=urgent,background');
+
+        $tester = $this->createTester(receiverTransports: ['urgent', 'background']);
+        $tester->execute([]);
+
+        self::assertSame(0, $tester->getStatusCode());
+        self::assertDoesNotMatchRegularExpression('/does\s+not configure/', $tester->getDisplay());
+    }
+
+    public function testMissingWorkerTransportIsNamedInWarning(): void
+    {
+        putenv('TFS_WORKER_TRANSPORTS=urgent,background');
+
+        $tester = $this->createTester(receiverTransports: ['urgent']);
+        $tester->execute([]);
+
+        self::assertSame(0, $tester->getStatusCode());
+        self::assertMatchesRegularExpression('/does\s+not configure/', $tester->getDisplay());
+        self::assertStringContainsString('background', $tester->getDisplay());
+    }
+
+    public function testMissingReceiverLocatorDoesNotWarn(): void
+    {
+        putenv('TFS_WORKER_TRANSPORTS=background');
+
+        $tester = $this->createTester();
+        $tester->execute([]);
+
+        self::assertSame(0, $tester->getStatusCode());
+        self::assertDoesNotMatchRegularExpression('/does\s+not configure/', $tester->getDisplay());
+    }
+
     public function testDatabaseUrlNotSetIsReportedAsSuch(): void
     {
         $tester = $this->createTester();
@@ -287,9 +321,12 @@ final class DoctorCommandTest extends TestCase
         self::assertStringContainsString('partials' . \DIRECTORY_SEPARATOR . '_footer.html.twig', $display);
     }
 
-    private function createTester(): CommandTester
+    /**
+     * @param list<string>|null $receiverTransports
+     */
+    private function createTester(?array $receiverTransports = null): CommandTester
     {
-        $this->kernel = new DoctorCommandTestKernel($this->projectRoot);
+        $this->kernel = new DoctorCommandTestKernel($this->projectRoot, receiverTransports: $receiverTransports);
         $this->kernel->boot();
 
         $application = new Application($this->kernel);

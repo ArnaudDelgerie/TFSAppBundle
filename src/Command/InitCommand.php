@@ -177,7 +177,7 @@ final class InitCommand extends Command
 
         $contents = '# ' . $productName . \PHP_EOL
             . \PHP_EOL
-            . '`' . $identifier . '` — managed by TFSAppWorkstation; see its `CONTRACT.md` for the station ↔ project contract.' . \PHP_EOL
+            . '`' . $identifier . '` — managed by TFSAppHub; see its `CONTRACT.md` for the hub ↔ project contract.' . \PHP_EOL
             . \PHP_EOL
             . '## Subcommands' . \PHP_EOL
             . \PHP_EOL
@@ -187,7 +187,7 @@ final class InitCommand extends Command
             . \PHP_EOL
             . '## Optional config fields' . \PHP_EOL
             . \PHP_EOL
-            . '`tfsapp:init` does not scaffold `actions` beyond its all-`false` skeleton, nor `run`, `app_port`, `icon_path`, or `splash_*` — add these to `tfsapp.config.json` by hand when needed.' . \PHP_EOL;
+            . '`tfsapp:init` does not scaffold `actions` beyond its all-`false` skeleton, nor `run`, `app_port`, `icon_path`, or `splash_*` — add these to `tfsapp.config.json` by hand when needed. For the `workers` declaration shape, see TFSAppHub\'s `CONTRACT.md` §2.' . \PHP_EOL;
 
         file_put_contents($readmePath, $contents);
 
