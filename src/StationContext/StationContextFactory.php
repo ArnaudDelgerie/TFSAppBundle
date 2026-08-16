@@ -26,6 +26,7 @@ final class StationContextFactory
             identifier: self::stringValue($env, 'TFS_APP_IDENTIFIER'),
             version: $version,
             asyncWorker: self::isFlagSet($env, 'TFS_ASYNC_WORKER'),
+            workerTransports: self::workerTransports($env),
             keyringAvailable: self::isFlagSet($env, 'TFS_KEYRING_AVAILABLE'),
             bridgeEnabled: '' !== self::stringValue($env, 'TFS_BRIDGE_URL'),
             runningUnderStation: '' !== $version,
@@ -46,5 +47,18 @@ final class StationContextFactory
     private static function isFlagSet(array $env, string $key): bool
     {
         return '1' === ($env[$key] ?? null);
+    }
+
+    /**
+     * @param array<string, string> $env
+     *
+     * @return list<string>
+     */
+    private static function workerTransports(array $env): array
+    {
+        return array_values(array_filter(array_map(
+            trim(...),
+            explode(',', self::stringValue($env, 'TFS_WORKER_TRANSPORTS')),
+        ), static fn (string $transport): bool => '' !== $transport));
     }
 }

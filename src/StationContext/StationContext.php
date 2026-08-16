@@ -10,6 +10,8 @@ final class StationContext implements StationContextInterface
         private readonly string $identifier,
         private readonly string $version,
         private readonly bool $asyncWorker,
+        /** @var list<string> */
+        private readonly array $workerTransports,
         private readonly bool $keyringAvailable,
         private readonly bool $bridgeEnabled,
         private readonly bool $runningUnderStation,
@@ -29,6 +31,11 @@ final class StationContext implements StationContextInterface
     public function isAsyncWorker(): bool
     {
         return $this->asyncWorker;
+    }
+
+    public function workerTransports(): array
+    {
+        return $this->workerTransports;
     }
 
     public function isKeyringAvailable(): bool

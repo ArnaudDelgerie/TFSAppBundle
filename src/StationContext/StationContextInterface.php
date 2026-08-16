@@ -12,6 +12,13 @@ interface StationContextInterface
 
     public function isAsyncWorker(): bool;
 
+    /**
+     * The transports the host reports it is consuming.
+     *
+     * @return list<string>
+     */
+    public function workerTransports(): array;
+
     public function isKeyringAvailable(): bool;
 
     public function isBridgeEnabled(): bool;
