@@ -16,6 +16,9 @@ final class TfsAppTwigGlobal
 
     public readonly bool $async_worker;
 
+    /** @var list<string> */
+    public readonly array $worker_transports;
+
     public readonly bool $running_under_station;
 
     public readonly bool $bridge_enabled;
@@ -25,6 +28,7 @@ final class TfsAppTwigGlobal
         $this->version = $context->version();
         $this->keyring_available = $context->isKeyringAvailable();
         $this->async_worker = $context->isAsyncWorker();
+        $this->worker_transports = $context->workerTransports();
         $this->running_under_station = $context->isRunningUnderStation();
         $this->bridge_enabled = $context->isBridgeEnabled();
     }

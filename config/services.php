@@ -36,6 +36,7 @@ return static function (ContainerConfigurator $container): void {
     $container->services()
         ->set(DoctorCommand::class)
         ->autowire()
+        ->arg('$receiverLocator', service('messenger.receiver_locator')->nullOnInvalid())
         ->tag('console.command');
 
     $container->services()

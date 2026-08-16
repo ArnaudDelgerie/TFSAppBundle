@@ -16,6 +16,7 @@ final class TfsAppTwigGlobalTest extends TestCase
     {
         putenv('TFS_APP_VERSION=1.2.3');
         putenv('TFS_ASYNC_WORKER=1');
+        putenv('TFS_WORKER_TRANSPORTS=urgent,scheduled,background');
         putenv('TFS_KEYRING_AVAILABLE=1');
         putenv('TFS_BRIDGE_URL=http://127.0.0.1:54321');
     }
@@ -27,6 +28,7 @@ final class TfsAppTwigGlobalTest extends TestCase
 
         putenv('TFS_APP_VERSION');
         putenv('TFS_ASYNC_WORKER');
+        putenv('TFS_WORKER_TRANSPORTS');
         putenv('TFS_KEYRING_AVAILABLE');
         putenv('TFS_BRIDGE_URL');
     }
@@ -44,6 +46,7 @@ final class TfsAppTwigGlobalTest extends TestCase
         self::assertInstanceOf(TfsAppTwigGlobal::class, $global);
         self::assertSame('1.2.3', $global->version);
         self::assertTrue($global->async_worker);
+        self::assertSame(['urgent', 'scheduled', 'background'], $global->worker_transports);
         self::assertTrue($global->keyring_available);
         self::assertTrue($global->bridge_enabled);
         self::assertTrue($global->running_under_station);

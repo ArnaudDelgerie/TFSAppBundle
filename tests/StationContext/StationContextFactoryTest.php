@@ -15,6 +15,7 @@ final class StationContextFactoryTest extends TestCase
             'TFS_APP_IDENTIFIER' => 'dev.local.demo-project',
             'TFS_APP_VERSION' => '1.2.3',
             'TFS_ASYNC_WORKER' => '1',
+            'TFS_WORKER_TRANSPORTS' => 'urgent,scheduled,background',
             'TFS_KEYRING_AVAILABLE' => '1',
             'TFS_BRIDGE_URL' => 'http://127.0.0.1:12345',
         ]))->create();
@@ -22,6 +23,7 @@ final class StationContextFactoryTest extends TestCase
         self::assertSame('dev.local.demo-project', $context->identifier());
         self::assertSame('1.2.3', $context->version());
         self::assertTrue($context->isAsyncWorker());
+        self::assertSame(['urgent', 'scheduled', 'background'], $context->workerTransports());
         self::assertTrue($context->isKeyringAvailable());
         self::assertTrue($context->isBridgeEnabled());
         self::assertTrue($context->isRunningUnderStation());
@@ -34,6 +36,7 @@ final class StationContextFactoryTest extends TestCase
         self::assertSame('', $context->identifier());
         self::assertSame('', $context->version());
         self::assertFalse($context->isAsyncWorker());
+        self::assertSame([], $context->workerTransports());
         self::assertFalse($context->isKeyringAvailable());
         self::assertFalse($context->isBridgeEnabled());
         self::assertFalse($context->isRunningUnderStation());
@@ -57,6 +60,25 @@ final class StationContextFactoryTest extends TestCase
         ]))->create();
 
         self::assertTrue($context->isAsyncWorker());
+    }
+
+    public function testWorkerTransportsAreTrimmedAndKeepTheirDeclarationOrder(): void
+    {
+        $context = (new StationContextFactory(static fn (): array => [
+            'TFS_WORKER_TRANSPORTS' => ' urgent, scheduled , background, ',
+        ]))->create();
+
+        self::assertSame(['urgent', 'scheduled', 'background'], $context->workerTransports());
+    }
+
+    public function testWorkerTransportsDoNotSetTheAsyncWorkerFlag(): void
+    {
+        $context = (new StationContextFactory(static fn (): array => [
+            'TFS_WORKER_TRANSPORTS' => 'urgent',
+        ]))->create();
+
+        self::assertSame(['urgent'], $context->workerTransports());
+        self::assertFalse($context->isAsyncWorker());
     }
 
     public function testBridgeUrlPresentEnablesBridge(): void

@@ -86,7 +86,7 @@ final class InitCommandTest extends TestCase
         ], $this->readConfig());
     }
 
-    public function testAsyncWorkerYesAddsKey(): void
+    public function testWorkersYesWritesOneDeclaration(): void
     {
         $tester = $this->createTester('project');
 
@@ -94,10 +94,17 @@ final class InitCommandTest extends TestCase
         $tester->execute([]);
 
         self::assertSame(0, $tester->getStatusCode());
-        self::assertSame(true, $this->readConfig()['async_worker']);
+        $config = $this->readConfig();
+
+        self::assertSame([['transports' => ['async']]], $config['workers']);
+        self::assertArrayNotHasKey('async_worker', $config);
+        self::assertSame(
+            ['project_name', 'product_name', 'identifier', 'app_version', 'workers', 'commands', 'actions'],
+            array_keys($config),
+        );
     }
 
-    public function testAsyncWorkerNoOmitsKey(): void
+    public function testWorkersNoOmitsKey(): void
     {
         $tester = $this->createTester('project');
 
@@ -105,7 +112,10 @@ final class InitCommandTest extends TestCase
         $tester->execute([]);
 
         self::assertSame(0, $tester->getStatusCode());
-        self::assertArrayNotHasKey('async_worker', $this->readConfig());
+        $config = $this->readConfig();
+
+        self::assertArrayNotHasKey('workers', $config);
+        self::assertArrayNotHasKey('async_worker', $config);
     }
 
     public function testReleasesRepoProvidedIsWritten(): void
@@ -347,7 +357,7 @@ final class InitCommandTest extends TestCase
 
         self::assertStringContainsString('# Project' . \PHP_EOL, $contents);
         self::assertStringContainsString('`dev.local.project`', $contents);
-        self::assertStringContainsString('managed by TFSAppWorkstation', $contents);
+        self::assertStringContainsString('managed by TFSAppHub', $contents);
         self::assertStringContainsString('## Subcommands' . \PHP_EOL, $contents);
         self::assertStringContainsString('Packaged only', $contents);
         self::assertStringContainsString('- `--version`', $contents);
@@ -365,6 +375,8 @@ final class InitCommandTest extends TestCase
         self::assertStringContainsString('`app_port`', $contents);
         self::assertStringContainsString('`icon_path`', $contents);
         self::assertStringContainsString('`splash_*`', $contents);
+        self::assertStringContainsString('`workers` declaration shape', $contents);
+        self::assertStringContainsString('TFSAppHub\'s `CONTRACT.md` §2', $contents);
     }
 
     public function testExistingReadmeIsLeftUntouched(): void

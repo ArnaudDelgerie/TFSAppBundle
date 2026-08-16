@@ -51,7 +51,7 @@ final class InitCommand extends Command
         $identifier = $io->ask('identifier (lowercase reverse-domain, e.g. "dev.local.my-app")', 'dev.local.' . $projectName, self::identifierValidator(...));
         $appVersion = $io->ask('app_version (semver MAJOR.MINOR.PATCH, e.g. "1.2.3")', '0.1.0', self::appVersionValidator(...));
 
-        $asyncWorker = $io->confirm('async_worker', false);
+        $workers = $io->confirm('workers (create one background consumer for the "async" transport)', false);
         $releasesRepo = $io->ask('releases_repo (bare name or owner/repo, e.g. "myorg/myapp"; leave empty to skip)', '', self::releasesRepoValidator(...));
 
         $config = [
@@ -61,8 +61,8 @@ final class InitCommand extends Command
             'app_version' => $appVersion,
         ];
 
-        if ($asyncWorker) {
-            $config['async_worker'] = true;
+        if ($workers) {
+            $config['workers'] = [['transports' => ['async']]];
         }
 
         if ('' !== $releasesRepo) {
@@ -177,7 +177,7 @@ final class InitCommand extends Command
 
         $contents = '# ' . $productName . \PHP_EOL
             . \PHP_EOL
-            . '`' . $identifier . '` — managed by TFSAppWorkstation; see its `CONTRACT.md` for the station ↔ project contract.' . \PHP_EOL
+            . '`' . $identifier . '` — managed by TFSAppHub; see its `CONTRACT.md` for the hub ↔ project contract.' . \PHP_EOL
             . \PHP_EOL
             . '## Subcommands' . \PHP_EOL
             . \PHP_EOL
@@ -187,7 +187,7 @@ final class InitCommand extends Command
             . \PHP_EOL
             . '## Optional config fields' . \PHP_EOL
             . \PHP_EOL
-            . '`tfsapp:init` does not scaffold `actions` beyond its all-`false` skeleton, nor `run`, `app_port`, `icon_path`, or `splash_*` — add these to `tfsapp.config.json` by hand when needed.' . \PHP_EOL;
+            . '`tfsapp:init` does not scaffold `actions` beyond its all-`false` skeleton, nor `run`, `app_port`, `icon_path`, or `splash_*` — add these to `tfsapp.config.json` by hand when needed. For the `workers` declaration shape, see TFSAppHub\'s `CONTRACT.md` §2.' . \PHP_EOL;
 
         file_put_contents($readmePath, $contents);
 
