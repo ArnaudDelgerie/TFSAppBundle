@@ -51,7 +51,7 @@ final class InitCommand extends Command
         $identifier = $io->ask('identifier (lowercase reverse-domain, e.g. "dev.local.my-app")', 'dev.local.' . $projectName, self::identifierValidator(...));
         $appVersion = $io->ask('app_version (semver MAJOR.MINOR.PATCH, e.g. "1.2.3")', '0.1.0', self::appVersionValidator(...));
 
-        $asyncWorker = $io->confirm('async_worker', false);
+        $workers = $io->confirm('workers (create one background consumer for the "async" transport)', false);
         $releasesRepo = $io->ask('releases_repo (bare name or owner/repo, e.g. "myorg/myapp"; leave empty to skip)', '', self::releasesRepoValidator(...));
 
         $config = [
@@ -61,8 +61,8 @@ final class InitCommand extends Command
             'app_version' => $appVersion,
         ];
 
-        if ($asyncWorker) {
-            $config['async_worker'] = true;
+        if ($workers) {
+            $config['workers'] = [['transports' => ['async']]];
         }
 
         if ('' !== $releasesRepo) {
