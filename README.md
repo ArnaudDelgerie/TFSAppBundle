@@ -55,6 +55,47 @@ overwriting anything. The contract's optional fields (`app_port`,
 `icon_path`, `commands`) aren't part of this prompt flow — add them by
 hand afterwards; their absence keeps the documented defaults.
 
+### Upload storage
+
+Durable files an app keeps — avatars, attachments, invoices — go in
+`APP_UPLOAD_DIR`, never under `public/`. The work is split three ways:
+
+- **The hub** gives the directory, guarantees it survives updates and
+  rollbacks, and carries it in `export`/`import` alongside the database.
+- **This bundle** gives `UploadStorageInterface`: every key is confined to that
+  directory (absolute keys, `..`, empty segments, null bytes and symlinks
+  pointing outside are all refused with `PathOutsideStorageException`), and the
+  responses are hardened — `download()` sends `Content-Disposition: attachment`
+  and `nosniff`; `inline()` adds `Content-Security-Policy: default-src 'none'; sandbox`.
+- **The app** writes the route and decides who may read what.
+
+```php
+#[Route('/invoices/{id}/file')]
+public function file(Invoice $invoice, UploadStorageInterface $uploads): Response
+{
+    $this->denyAccessUnlessGranted('VIEW', $invoice);
+
+    return $uploads->download($invoice->getFileKey(), $invoice->getOriginalName());
+}
+```
+
+Writing is `$uploads->store('invoices/'.$invoice->getId().'.pdf', $uploadedFile)`;
+the key, its uniqueness and any validation are the app's. A missing key throws
+`StorageException` rather than answering 404 — check `has()` first when a
+missing file is a normal case for the route.
+
+No route ships here, on purpose: a download endpoint is entirely authorization
+policy. See the hub's `.project/decision/006-durable-files-live-in-the-data-directory.md`.
+
+Outside the hub (`symfony server:start`, PHPUnit, CI), the root falls back to
+`var/uploads` under the project; `tfsapp:doctor` prints which one is in use and
+whether it is writable.
+
+Inside the hub's window today, a `download()` response is saved straight into
+the OS download directory (the name de-duplicated if taken), with no Save-As
+prompt. That is the hub's current, provisional behaviour, not this bundle's —
+see its `contract/4-the-http-contract.md` — and it may change.
+
 ## Development
 
 Not published to Packagist yet — for now, require it via a VCS repository:

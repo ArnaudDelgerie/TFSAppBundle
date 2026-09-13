@@ -35,6 +35,11 @@ final class DoctorCommandTest extends TestCase
         putenv('TFS_KEYRING_AVAILABLE');
         putenv('DATABASE_URL');
         unset($_SERVER['DATABASE_URL'], $_ENV['DATABASE_URL']);
+        putenv('APP_UPLOAD_DIR');
+
+        if (is_dir($this->baseDir . '/uploads')) {
+            chmod($this->baseDir . '/uploads', 0777);
+        }
 
         self::removeDir($this->baseDir);
     }
@@ -262,6 +267,57 @@ final class DoctorCommandTest extends TestCase
         self::assertStringContainsString('sqlite_pragmas', $display);
         self::assertStringContainsString('disabled', $display);
         self::assertStringNotContainsString('sqlite_journal_mode', $display);
+    }
+
+    public function testUploadDirFromEnvironmentIsReported(): void
+    {
+        mkdir($this->baseDir . '/uploads');
+        putenv('APP_UPLOAD_DIR=' . $this->baseDir . '/uploads');
+
+        $tester = $this->createTester();
+        $tester->execute([]);
+
+        self::assertSame(0, $tester->getStatusCode());
+        $display = $tester->getDisplay();
+
+        self::assertMatchesRegularExpression('/upload_dir\s+' . preg_quote($this->baseDir . '/uploads', '/') . '\s/', $display);
+        self::assertMatchesRegularExpression('/upload_dir_source\s+APP_UPLOAD_DIR\s/', $display);
+        self::assertMatchesRegularExpression('/upload_dir_writable\s+yes\s/', $display);
+        self::assertStringNotContainsString('not writable', $display);
+    }
+
+    public function testUploadDirFallbackIsReportedAsSuch(): void
+    {
+        $tester = $this->createTester();
+        $tester->execute([]);
+
+        self::assertSame(0, $tester->getStatusCode());
+        $display = $tester->getDisplay();
+
+        self::assertMatchesRegularExpression('/upload_dir\s+' . preg_quote($this->projectRoot . '/var/uploads', '/') . '\s/', $display);
+        self::assertMatchesRegularExpression('/upload_dir_source\s+fallback \(not set\)/', $display);
+        self::assertMatchesRegularExpression('/upload_dir_writable\s+yes \(created on first write\)/', $display);
+        self::assertStringNotContainsString('not writable', $display);
+    }
+
+    public function testUnwritableUploadDirIsFlaggedWithAWarning(): void
+    {
+        if (\function_exists('posix_geteuid') && 0 === posix_geteuid()) {
+            self::markTestSkipped('root writes through any permission bits.');
+        }
+
+        mkdir($this->baseDir . '/uploads');
+        chmod($this->baseDir . '/uploads', 0555);
+        putenv('APP_UPLOAD_DIR=' . $this->baseDir . '/uploads');
+
+        $tester = $this->createTester();
+        $tester->execute([]);
+
+        self::assertSame(0, $tester->getStatusCode());
+        $display = $tester->getDisplay();
+
+        self::assertMatchesRegularExpression('/upload_dir_writable\s+no\s/', $display);
+        self::assertMatchesRegularExpression('/is\s+not\s+writable/', $display);
     }
 
     public function testNoTemplatesDirDoesNotWarn(): void
