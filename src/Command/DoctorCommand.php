@@ -8,6 +8,7 @@ use ArnaudDelgerie\TFSAppBundle\Bridge\SecretStoreInterface;
 use ArnaudDelgerie\TFSAppBundle\Bridge\UpdateCheckerInterface;
 use ArnaudDelgerie\TFSAppBundle\Doctrine\SqlitePragmas;
 use ArnaudDelgerie\TFSAppBundle\StationContext\StationContextInterface;
+use ArnaudDelgerie\TFSAppBundle\Storage\UploadStorageInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -23,6 +24,7 @@ final class DoctorCommand extends Command
         private readonly StationContextInterface $context,
         private readonly SecretStoreInterface $secretStore,
         private readonly UpdateCheckerInterface $updateChecker,
+        private readonly UploadStorageInterface $uploadStorage,
         private readonly KernelInterface $kernel,
         private readonly ?ServiceCollectionInterface $receiverLocator = null,
     ) {
@@ -46,11 +48,16 @@ final class DoctorCommand extends Command
         ];
 
         [$databaseRows, $databaseWarning] = $this->inspectDatabase();
+        [$uploadRows, $uploadWarning] = $this->inspectUploadDir();
 
-        $io->table(['Field', 'Value'], [...$rows, ...$databaseRows]);
+        $io->table(['Field', 'Value'], [...$rows, ...$databaseRows, ...$uploadRows]);
 
         if (null !== $databaseWarning) {
             $io->warning($databaseWarning);
+        }
+
+        if (null !== $uploadWarning) {
+            $io->warning($uploadWarning);
         }
 
         $this->warnMissingWorkerTransports($io);
@@ -81,6 +88,45 @@ final class DoctorCommand extends Command
             . 'Those consumers exit immediately, so the hub gives up on them after a few retries.',
             implode(', ', $missingTransports),
         ));
+    }
+
+    /**
+     * The storage creates its root on first write, so a root that does not
+     * exist yet is writable when its nearest existing ancestor is.
+     *
+     * @return array{0: list<array{0: string, 1: string}>, 1: string|null}
+     */
+    private function inspectUploadDir(): array
+    {
+        $root = $this->uploadStorage->root();
+
+        $rows = [
+            ['upload_dir', $root],
+            ['upload_dir_source', null !== self::readEnv('APP_UPLOAD_DIR') ? 'APP_UPLOAD_DIR' : 'fallback (not set)'],
+        ];
+
+        $ancestor = $root;
+
+        while (!file_exists($ancestor) && \dirname($ancestor) !== $ancestor) {
+            $ancestor = \dirname($ancestor);
+        }
+
+        $writable = is_dir($ancestor) && is_writable($ancestor);
+        $rows[] = ['upload_dir_writable', match (true) {
+            !$writable => 'no',
+            $ancestor !== $root => 'yes (created on first write)',
+            default => 'yes',
+        }];
+
+        if ($writable) {
+            return [$rows, null];
+        }
+
+        return [$rows, sprintf(
+            'The upload directory %s is not writable by this process. '
+            . 'Every UploadStorage write, store and delete will fail until it is.',
+            $root,
+        )];
     }
 
     /**

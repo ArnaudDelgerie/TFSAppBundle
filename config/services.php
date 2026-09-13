@@ -14,6 +14,8 @@ use ArnaudDelgerie\TFSAppBundle\EventListener\HealthzListener;
 use ArnaudDelgerie\TFSAppBundle\StationContext\StationContext;
 use ArnaudDelgerie\TFSAppBundle\StationContext\StationContextFactory;
 use ArnaudDelgerie\TFSAppBundle\StationContext\StationContextInterface;
+use ArnaudDelgerie\TFSAppBundle\Storage\UploadStorage;
+use ArnaudDelgerie\TFSAppBundle\Storage\UploadStorageInterface;
 use ArnaudDelgerie\TFSAppBundle\Twig\TfsAppTwigGlobal;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 
@@ -77,4 +79,16 @@ return static function (ContainerConfigurator $container): void {
     $container->services()
         ->set(TfsAppTwigGlobal::class)
         ->autowire();
+
+    // Outside the hub (symfony server:start, PHPUnit, CI) APP_UPLOAD_DIR is
+    // absent; fall back to the same var/uploads the hub's dev mode injects.
+    $container->parameters()
+        ->set('tfsapp.upload_dir_fallback', '%kernel.project_dir%/var/uploads');
+
+    $container->services()
+        ->set(UploadStorage::class)
+        ->arg('$root', '%env(default:tfsapp.upload_dir_fallback:APP_UPLOAD_DIR)%');
+
+    $container->services()
+        ->alias(UploadStorageInterface::class, UploadStorage::class);
 };
