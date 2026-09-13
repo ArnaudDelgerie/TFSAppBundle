@@ -6,8 +6,10 @@ namespace ArnaudDelgerie\TFSAppBundle\Storage;
 
 use ArnaudDelgerie\TFSAppBundle\Storage\Exception\PathOutsideStorageException;
 use ArnaudDelgerie\TFSAppBundle\Storage\Exception\StorageException;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\File\Exception\FileException;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
+use Symfony\Component\HttpFoundation\ResponseHeaderBag;
 
 final class UploadStorage implements UploadStorageInterface
 {
@@ -70,6 +72,34 @@ final class UploadStorage implements UploadStorageInterface
         if (!@unlink($path)) {
             throw new StorageException(sprintf('Could not delete %s.', $path));
         }
+    }
+
+    public function download(string $key, ?string $filename = null): BinaryFileResponse
+    {
+        return $this->respond($key, $filename, ResponseHeaderBag::DISPOSITION_ATTACHMENT);
+    }
+
+    public function inline(string $key, ?string $filename = null): BinaryFileResponse
+    {
+        $response = $this->respond($key, $filename, ResponseHeaderBag::DISPOSITION_INLINE);
+        $response->headers->set('Content-Security-Policy', "default-src 'none'; sandbox");
+
+        return $response;
+    }
+
+    private function respond(string $key, ?string $filename, string $disposition): BinaryFileResponse
+    {
+        $path = $this->resolve($key);
+
+        if (!is_file($path)) {
+            throw new StorageException('No stored file at the requested key.');
+        }
+
+        $response = new BinaryFileResponse($path);
+        $response->setContentDisposition($disposition, $filename ?? basename($path));
+        $response->headers->set('X-Content-Type-Options', 'nosniff');
+
+        return $response;
     }
 
     /**
