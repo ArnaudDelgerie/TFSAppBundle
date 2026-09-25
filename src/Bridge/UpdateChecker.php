@@ -12,9 +12,25 @@ final class UpdateChecker implements UpdateCheckerInterface
     {
     }
 
+    /**
+     * The probe is read-only: the hub answers 200 for an enabled "update"
+     * group and 404 for a disabled one, without refreshing its release
+     * index. A disabled group is not an error here — that is what is being
+     * reported — so unlike check() nothing throws and no typed exception
+     * is mapped: absent bridge, transport failure or any non-200 answer
+     * all mean unavailable.
+     */
     public function isAvailable(): bool
     {
-        return $this->transport->isConfigured();
+        if (!$this->transport->isConfigured()) {
+            return false;
+        }
+
+        try {
+            return 200 === $this->transport->request('GET', '/update/check')->getStatusCode();
+        } catch (\Throwable) {
+            return false;
+        }
     }
 
     public function check(): UpdateCheckResult

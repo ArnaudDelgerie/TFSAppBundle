@@ -10,11 +10,12 @@ use ArnaudDelgerie\TFSAppBundle\Bridge\Exception\UpdateNotEnabledException;
 interface UpdateCheckerInterface
 {
     /**
-     * Never throws and never calls the network: reports only whether the
-     * bridge transport is present (TFS_BRIDGE_URL set). Unlike
-     * SecretStoreInterface::isAvailable(), it says nothing about whether the
-     * "update" group itself is enabled — there is no side-effect-free probe
-     * for that, so a disabled group only surfaces via check() below.
+     * Never throws: reports whether the update route itself is enabled, by
+     * probing the hub's read-only GET /update/check (200 for an enabled
+     * "update" group, 404 for a disabled one, no network refresh). Unlike
+     * SecretStoreInterface::isAvailable(), it does call the bridge, but an
+     * absent transport or a failed probe simply reports unavailable — a
+     * disabled group only throws via check() below, for a direct caller.
      */
     public function isAvailable(): bool;
 
