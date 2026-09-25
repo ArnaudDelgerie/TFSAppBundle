@@ -142,6 +142,73 @@ with a route of its own that writes the file at the returned path.
 design, so the app writes that path itself. `pick_path`'s filters are
 webview IPC too; there is no PHP API for either here.
 
+### Backend close guards
+
+`BackendCloseGuardInterface` marks background work — a Messenger
+handler, a long HTTP request — that a person should be warned about
+before the last window closes the shared backend. Declare
+`"close_guard": {"bridge": true}` in `tfsapp.config.json`'s `actions`
+to start the transport, and register **before the work starts**, not
+after: a guard registered late cannot warn about a close that already
+happened.
+
+```php
+use ArnaudDelgerie\TFSAppBundle\Bridge\BackendCloseGuardInterface;
+
+final class ExportHandler
+{
+    public function __construct(private readonly BackendCloseGuardInterface $guards)
+    {
+    }
+
+    public function __invoke(ExportJob $job): void
+    {
+        $id = 'export:' . $job->getId(); // distinct ids for simultaneous jobs
+
+        $guarded = $this->guards->register($id);
+
+        if (!$guarded) {
+            // No guard installed: no bridge at all, or the close_guard
+            // group's routes are gated — never a claim of protection.
+            // Run unguarded, or refuse the work.
+        }
+
+        try {
+            // the vulnerable work
+        } finally {
+            if ($guarded) {
+                $this->guards->remove($id); // the owner removes its own guard
+            }
+        }
+    }
+}
+```
+
+Only a `true` return means the hub acknowledged the guard. `false` is
+the unavailable result — no `TFS_BRIDGE_URL` (nothing declared a
+bridge), or a 404-gated route while another group's bridge runs — and
+it never implies protection. Every other refusal stays distinguishable
+as a typed exception: an invalid id (`CloseGuardInvalidIdException`,
+the hub's own non-empty/128-byte-UTF-8 rule), a full namespace
+(`CloseGuardTooManyException`, 16 guards per app instance), shutdown
+committed (`CloseGuardClosingException`), plus the shared bridge
+401/413/invalid-body errors.
+
+Registration is idempotent per id, and removing an absent id is
+acknowledged harmlessly — but one job's removal never touches another
+job's guard, which is why simultaneous jobs each own their own id.
+Guards have no expiry and nothing is persisted: a task that crashes
+leaves its warning standing until its owner removes it or the process
+exits, and the next launch starts clean. Close guards cover normal
+window closure only — mandatory shutdown never waits for a
+confirmation answer.
+
+A webview's own unsaved-document guards are a separate frontend
+contract (`close_guard.ipc`, per-window and per-document, through
+`close_guard_context`/`register`/`remove` IPC): see TFSAppHub's
+`CONTRACT.md` §7 for that namespace. This bundle deliberately ships no
+PHP abstraction for it.
+
 ## Development
 
 Not published to Packagist yet — for now, require it via a VCS repository:

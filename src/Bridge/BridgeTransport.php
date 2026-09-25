@@ -18,9 +18,15 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
  * Maps the universal, route-agnostic wire errors (401 bad token, 413 body
  * cap, 400 invalid body) to typed exceptions here; route-specific ambiguous
  * ones (404, 403) are left for the caller to interpret with its own context.
+ * A 400 passes through only on the close-guard routes and only when its body
+ * carries their invalid_id — every other 400, known or not, stays the
+ * generic protocol error so an unexpected answer can never be mistaken for
+ * a documented route error.
  */
 final class BridgeTransport
 {
+    private const CLOSE_GUARD_ROUTES = ['/close-guard/register', '/close-guard/remove'];
+
     public function __construct(private readonly ?HttpClientInterface $client)
     {
     }
@@ -42,9 +48,26 @@ final class BridgeTransport
         $response = $this->client->request($method, $path, $options);
 
         return match ($response->getStatusCode()) {
-            400, 401 => throw BridgeProtocolException::forStatus($response->getStatusCode()),
+            401 => throw BridgeProtocolException::forStatus(401),
+            400 => (\in_array($path, self::CLOSE_GUARD_ROUTES, true) && $this->hasError($response, 'invalid_id'))
+                ? $response
+                : throw BridgeProtocolException::forStatus(400),
             413 => throw BridgePayloadTooLargeException::create(),
             default => $response,
         };
+    }
+
+    /**
+     * True when this 400's body names exactly the expected error code. An
+     * unparseable body or any other code stays transport-level: the generic
+     * mapping must never let a malformed or unknown error pass through.
+     */
+    private function hasError(ResponseInterface $response, string $error): bool
+    {
+        try {
+            return ($response->toArray(false)['error'] ?? null) === $error;
+        } catch (\Throwable) {
+            return false;
+        }
     }
 }

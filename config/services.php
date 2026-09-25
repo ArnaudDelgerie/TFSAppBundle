@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use ArnaudDelgerie\TFSAppBundle\Bridge\BackendCloseGuard;
+use ArnaudDelgerie\TFSAppBundle\Bridge\BackendCloseGuardInterface;
 use ArnaudDelgerie\TFSAppBundle\Bridge\BridgeTransport;
 use ArnaudDelgerie\TFSAppBundle\Bridge\BridgeTransportFactory;
 use ArnaudDelgerie\TFSAppBundle\Bridge\SecretStore;
@@ -75,6 +77,13 @@ return static function (ContainerConfigurator $container): void {
 
     $container->services()
         ->alias(UpdateCheckerInterface::class, UpdateChecker::class);
+
+    $container->services()
+        ->set(BackendCloseGuard::class)
+        ->autowire();
+
+    $container->services()
+        ->alias(BackendCloseGuardInterface::class, BackendCloseGuard::class);
 
     $container->services()
         ->set(TfsAppTwigGlobal::class)
