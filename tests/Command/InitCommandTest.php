@@ -33,7 +33,7 @@ final class InitCommandTest extends TestCase
     {
         $tester = $this->createTester('Demo Project');
 
-        $tester->setInputs(['', '', '', '', '', '']);
+        $tester->setInputs(['', '', '', '', '']);
         $tester->execute([]);
 
         self::assertSame(0, $tester->getStatusCode());
@@ -43,7 +43,6 @@ final class InitCommandTest extends TestCase
             'product_name' => 'Demo Project',
             'identifier' => 'dev.local.demo-project',
             'app_version' => '0.1.0',
-            'commands' => self::buildCommands(),
             'actions' => self::actionsSkeleton(),
         ], $this->readConfig());
     }
@@ -52,7 +51,7 @@ final class InitCommandTest extends TestCase
     {
         $tester = $this->createTester('project');
 
-        $tester->setInputs(['custom_app', 'Custom App Name', 'com.example.customapp', '2.3.4', '', '']);
+        $tester->setInputs(['custom_app', 'Custom App Name', 'com.example.customapp', '2.3.4', '']);
         $tester->execute([]);
 
         self::assertSame(0, $tester->getStatusCode());
@@ -62,7 +61,6 @@ final class InitCommandTest extends TestCase
             'product_name' => 'Custom App Name',
             'identifier' => 'com.example.customapp',
             'app_version' => '2.3.4',
-            'commands' => self::buildCommands(),
             'actions' => self::actionsSkeleton(),
         ], $this->readConfig());
     }
@@ -71,7 +69,7 @@ final class InitCommandTest extends TestCase
     {
         $tester = $this->createTester('project');
 
-        $tester->setInputs(['bad name', 'goodname', '', '', '01.2.3', '1.2.3', '', '']);
+        $tester->setInputs(['bad name', 'goodname', '', '', '01.2.3', '1.2.3', '']);
         $tester->execute([]);
 
         self::assertSame(0, $tester->getStatusCode());
@@ -81,7 +79,6 @@ final class InitCommandTest extends TestCase
             'product_name' => 'Goodname',
             'identifier' => 'dev.local.goodname',
             'app_version' => '1.2.3',
-            'commands' => self::buildCommands(),
             'actions' => self::actionsSkeleton(),
         ], $this->readConfig());
     }
@@ -90,7 +87,7 @@ final class InitCommandTest extends TestCase
     {
         $tester = $this->createTester('project');
 
-        $tester->setInputs(['', '', '', '', 'yes', '']);
+        $tester->setInputs(['', '', '', '', 'yes']);
         $tester->execute([]);
 
         self::assertSame(0, $tester->getStatusCode());
@@ -99,7 +96,7 @@ final class InitCommandTest extends TestCase
         self::assertSame([['transports' => ['async']]], $config['workers']);
         self::assertArrayNotHasKey('async_worker', $config);
         self::assertSame(
-            ['project_name', 'product_name', 'identifier', 'app_version', 'workers', 'commands', 'actions'],
+            ['project_name', 'product_name', 'identifier', 'app_version', 'workers', 'actions'],
             array_keys($config),
         );
     }
@@ -108,7 +105,7 @@ final class InitCommandTest extends TestCase
     {
         $tester = $this->createTester('project');
 
-        $tester->setInputs(['', '', '', '', 'no', '']);
+        $tester->setInputs(['', '', '', '', 'no']);
         $tester->execute([]);
 
         self::assertSame(0, $tester->getStatusCode());
@@ -118,48 +115,30 @@ final class InitCommandTest extends TestCase
         self::assertArrayNotHasKey('async_worker', $config);
     }
 
-    public function testReleasesRepoProvidedIsWritten(): void
+    public function testNoObsoleteKeysAreWritten(): void
     {
         $tester = $this->createTester('project');
 
-        $tester->setInputs(['', '', '', '', '', 'myorg/myapp']);
+        $tester->setInputs(['', '', '', '', '']);
         $tester->execute([]);
 
         self::assertSame(0, $tester->getStatusCode());
-        self::assertSame('myorg/myapp', $this->readConfig()['releases_repo']);
-    }
+        $config = $this->readConfig();
 
-    public function testReleasesRepoEmptyOmitsKey(): void
-    {
-        $tester = $this->createTester('project');
-
-        $tester->setInputs(['', '', '', '', '', '']);
-        $tester->execute([]);
-
-        self::assertSame(0, $tester->getStatusCode());
-        self::assertArrayNotHasKey('releases_repo', $this->readConfig());
-    }
-
-    public function testReleasesRepoMalformedIsReaskedThenAccepted(): void
-    {
-        $tester = $this->createTester('project');
-
-        $tester->setInputs(['', '', '', '', '', 'bad repo!', 'myorg/myapp']);
-        $tester->execute([]);
-
-        self::assertSame(0, $tester->getStatusCode());
-        self::assertSame('myorg/myapp', $this->readConfig()['releases_repo']);
+        self::assertArrayNotHasKey('releases_repo', $config);
+        self::assertStringNotContainsString('pre-build', (string) file_get_contents($this->projectRoot . '/tfsapp.config.json'));
+        self::assertStringNotContainsString('post-build', (string) file_get_contents($this->projectRoot . '/tfsapp.config.json'));
     }
 
     public function testCommandsScaffoldOmitsMigrationHooksWithoutDoctrine(): void
     {
         $tester = $this->createTester('project');
 
-        $tester->setInputs(['', '', '', '', '', '']);
+        $tester->setInputs(['', '', '', '', '']);
         $tester->execute([]);
 
         self::assertSame(0, $tester->getStatusCode());
-        self::assertSame(self::buildCommands(), $this->readConfig()['commands']);
+        self::assertArrayNotHasKey('commands', $this->readConfig());
     }
 
     public function testCommandsScaffoldAddsMigrationHooksWithDoctrineInstalled(): void
@@ -167,7 +146,7 @@ final class InitCommandTest extends TestCase
         $tester = $this->createTester('project');
         $this->writeComposerLock(['doctrine/doctrine-migrations-bundle']);
 
-        $tester->setInputs(['', '', '', '', '', '']);
+        $tester->setInputs(['', '', '', '', '']);
         $tester->execute([]);
 
         self::assertSame(0, $tester->getStatusCode());
@@ -179,11 +158,11 @@ final class InitCommandTest extends TestCase
         $tester = $this->createTester('project');
         file_put_contents($this->projectRoot . '/composer.lock', '{not valid json');
 
-        $tester->setInputs(['', '', '', '', '', '']);
+        $tester->setInputs(['', '', '', '', '']);
         $tester->execute([]);
 
         self::assertSame(0, $tester->getStatusCode());
-        self::assertSame(self::buildCommands(), $this->readConfig()['commands']);
+        self::assertArrayNotHasKey('commands', $this->readConfig());
     }
 
     public function testCommandsScaffoldAddsMigrationHooksWhenDoctrineInPackagesDev(): void
@@ -191,7 +170,7 @@ final class InitCommandTest extends TestCase
         $tester = $this->createTester('project');
         $this->writeComposerLock([], ['doctrine/doctrine-migrations-bundle']);
 
-        $tester->setInputs(['', '', '', '', '', '']);
+        $tester->setInputs(['', '', '', '', '']);
         $tester->execute([]);
 
         self::assertSame(0, $tester->getStatusCode());
@@ -202,7 +181,7 @@ final class InitCommandTest extends TestCase
     {
         $tester = $this->createTester('project');
 
-        $tester->setInputs(['', '', '', '', '', '']);
+        $tester->setInputs(['', '', '', '', '']);
         $tester->execute([]);
 
         self::assertSame(0, $tester->getStatusCode());
@@ -222,79 +201,62 @@ final class InitCommandTest extends TestCase
         self::assertSame(Command::SUCCESS, $tester->getStatusCode());
         self::assertStringNotContainsString('project_name', $tester->getDisplay());
         self::assertSame($original, file_get_contents($configPath));
-        self::assertDirectoryExists($this->projectRoot . '/tfsapp_build');
-        self::assertSame('/tfsapp_build/' . \PHP_EOL, file_get_contents($this->projectRoot . '/.gitignore'));
+        self::assertDirectoryDoesNotExist($this->projectRoot . '/tfsapp_build');
+        self::assertFileDoesNotExist($this->projectRoot . '/.gitignore');
     }
 
-    public function testBuildDirAndGitignoreAreCreatedOnFreshProject(): void
+    public function testNoBuildSurfaceIsCreatedOnFreshProject(): void
     {
         $tester = $this->createTester('project');
 
-        $tester->setInputs(['', '', '', '', '', '']);
+        $tester->setInputs(['', '', '', '', '']);
         $tester->execute([]);
 
         self::assertSame(Command::SUCCESS, $tester->getStatusCode());
-        self::assertDirectoryExists($this->projectRoot . '/tfsapp_build');
-        self::assertSame('/tfsapp_build/' . \PHP_EOL, file_get_contents($this->projectRoot . '/.gitignore'));
+        self::assertDirectoryDoesNotExist($this->projectRoot . '/tfsapp_build');
+        self::assertFileDoesNotExist($this->projectRoot . '/.gitignore');
     }
 
-    public function testGitignoreEntryIsAppendedOncePreservingExistingLines(): void
+    public function testExistingBuildDirAndGitignoreEntryAreLeftAlone(): void
     {
         $tester = $this->createTester('project');
 
+        mkdir($this->projectRoot . '/tfsapp_build');
+        file_put_contents($this->projectRoot . '/tfsapp_build/.gitkeep', '');
         $gitignorePath = $this->projectRoot . '/.gitignore';
-        file_put_contents($gitignorePath, '/vendor/' . \PHP_EOL);
+        $originalGitignore = '/vendor/' . \PHP_EOL . '/tfsapp_build/' . \PHP_EOL;
+        file_put_contents($gitignorePath, $originalGitignore);
 
-        $tester->setInputs(['', '', '', '', '', '']);
+        $tester->setInputs(['', '', '', '', '']);
         $tester->execute([]);
 
         self::assertSame(Command::SUCCESS, $tester->getStatusCode());
-        self::assertSame(
-            '/vendor/' . \PHP_EOL . '/tfsapp_build/' . \PHP_EOL,
-            file_get_contents($gitignorePath),
-        );
+        self::assertSame($originalGitignore, file_get_contents($gitignorePath));
+        self::assertFileExists($this->projectRoot . '/tfsapp_build/.gitkeep');
     }
 
-    public function testSecondRunLeavesBuildDirAndGitignoreEntryUntouchedWithoutDuplicate(): void
+    public function testRerunOverExistingFilesCreatesNoBuildSurface(): void
     {
         $tester = $this->createTester('project');
 
-        $tester->setInputs(['', '', '', '', '', '']);
+        $tester->setInputs(['', '', '', '', '']);
         $tester->execute([]);
 
         self::assertSame(Command::SUCCESS, $tester->getStatusCode());
-
-        $gitignoreAfterFirstRun = file_get_contents($this->projectRoot . '/.gitignore');
 
         $secondTester = new CommandTester((new Application($this->kernel))->find('tfsapp:init'));
         $secondTester->execute([]);
 
         self::assertSame(Command::SUCCESS, $secondTester->getStatusCode());
-        self::assertDirectoryExists($this->projectRoot . '/tfsapp_build');
-        self::assertSame($gitignoreAfterFirstRun, file_get_contents($this->projectRoot . '/.gitignore'));
-        self::assertSame(1, substr_count($gitignoreAfterFirstRun, '/tfsapp_build/'));
-    }
-
-    public function testGitignoreNeverIgnoresTheConfigFile(): void
-    {
-        $tester = $this->createTester('project');
-
-        $tester->setInputs(['', '', '', '', '', '']);
-        $tester->execute([]);
-
-        self::assertSame(Command::SUCCESS, $tester->getStatusCode());
-
-        $gitignoreLines = array_map('trim', (array) preg_split('/\R/', (string) file_get_contents($this->projectRoot . '/.gitignore')));
-
-        self::assertNotContains('tfsapp.config.json', $gitignoreLines);
-        self::assertNotContains('/tfsapp.config.json', $gitignoreLines);
+        self::assertDirectoryDoesNotExist($this->projectRoot . '/tfsapp_build');
+        self::assertFileDoesNotExist($this->projectRoot . '/.gitignore');
     }
 
     public function testChangelogIsCreatedWithConfiguredAppVersion(): void
     {
         $tester = $this->createTester('project');
 
-        $tester->setInputs(['', '', '', '2.5.0', '', '']);
+        $tester->setInputs(['', '', '', '2.5.0', '']);
         $tester->execute([]);
 
         self::assertSame(Command::SUCCESS, $tester->getStatusCode());
@@ -315,7 +277,7 @@ final class InitCommandTest extends TestCase
         $original = '# Changelog' . \PHP_EOL . \PHP_EOL . '## 9.9.9' . \PHP_EOL . \PHP_EOL . '- Something else.' . \PHP_EOL;
         file_put_contents($changelogPath, $original);
 
-        $tester->setInputs(['', '', '', '', '', '']);
+        $tester->setInputs(['', '', '', '', '']);
         $tester->execute([]);
 
         self::assertSame(Command::SUCCESS, $tester->getStatusCode());
@@ -326,7 +288,7 @@ final class InitCommandTest extends TestCase
     {
         $tester = $this->createTester('project');
 
-        $tester->setInputs(['', '', '', '', '', '']);
+        $tester->setInputs(['', '', '', '', '']);
         $tester->execute([]);
 
         self::assertSame(Command::SUCCESS, $tester->getStatusCode());
@@ -345,7 +307,7 @@ final class InitCommandTest extends TestCase
     {
         $tester = $this->createTester('project');
 
-        $tester->setInputs(['', '', '', '', '', '']);
+        $tester->setInputs(['', '', '', '', '']);
         $tester->execute([]);
 
         self::assertSame(Command::SUCCESS, $tester->getStatusCode());
@@ -387,7 +349,7 @@ final class InitCommandTest extends TestCase
         $original = '# Something else' . \PHP_EOL;
         file_put_contents($readmePath, $original);
 
-        $tester->setInputs(['', '', '', '', '', '']);
+        $tester->setInputs(['', '', '', '', '']);
         $tester->execute([]);
 
         self::assertSame(Command::SUCCESS, $tester->getStatusCode());
@@ -398,7 +360,7 @@ final class InitCommandTest extends TestCase
     {
         $tester = $this->createTester('project');
 
-        $tester->setInputs(['', '', '', '', '', '']);
+        $tester->setInputs(['', '', '', '', '']);
         $tester->execute([]);
 
         self::assertSame(Command::SUCCESS, $tester->getStatusCode());
@@ -453,23 +415,14 @@ final class InitCommandTest extends TestCase
 
     private static function buildCommands(bool $withMigrations = false): array
     {
-        $commands = [
-            'pre-build' => [
-                'composer install --no-dev --no-scripts --optimize-autoloader',
-                'php bin/console cache:clear --env=prod --no-debug',
-                'php bin/console cache:warmup --env=prod --no-debug',
-            ],
-            'post-build' => [
-                'composer install',
-            ],
-        ];
-
-        if ($withMigrations) {
-            $commands['pre-install'] = ['doctrine:migrations:migrate --no-interaction'];
-            $commands['pre-update'] = ['doctrine:migrations:migrate --no-interaction'];
+        if (!$withMigrations) {
+            return [];
         }
 
-        return $commands;
+        return [
+            'pre-install' => ['doctrine:migrations:migrate --no-interaction'],
+            'pre-update' => ['doctrine:migrations:migrate --no-interaction'],
+        ];
     }
 
     private static function actionsSkeleton(): array

@@ -26,8 +26,6 @@ final class InitCommand extends Command
         $projectDir = rtrim($this->kernel->getProjectDir(), '/');
 
         $this->ensureConfig($projectDir, $io);
-        $this->ensureBuildDir($projectDir, $io);
-        $this->ensureGitignore($projectDir, $io);
         $this->ensureChangelog($projectDir, $io);
         $this->ensureReadme($projectDir, $io);
 
@@ -52,7 +50,6 @@ final class InitCommand extends Command
         $appVersion = $io->ask('app_version (semver MAJOR.MINOR.PATCH, e.g. "1.2.3")', '0.1.0', self::appVersionValidator(...));
 
         $workers = $io->confirm('workers (create one background consumer for the "async" transport)', false);
-        $releasesRepo = $io->ask('releases_repo (bare name or owner/repo, e.g. "myorg/myapp"; leave empty to skip)', '', self::releasesRepoValidator(...));
 
         $config = [
             'project_name' => $projectName,
@@ -65,11 +62,12 @@ final class InitCommand extends Command
             $config['workers'] = [['transports' => ['async']]];
         }
 
-        if ('' !== $releasesRepo) {
-            $config['releases_repo'] = $releasesRepo;
+        $commands = self::buildCommands($projectDir);
+
+        if ([] !== $commands) {
+            $config['commands'] = $commands;
         }
 
-        $config['commands'] = self::buildCommands($projectDir);
         $config['actions'] = self::actionsSkeleton();
 
         file_put_contents(
@@ -78,52 +76,6 @@ final class InitCommand extends Command
         );
 
         $io->success(sprintf('Created %s', $configPath));
-    }
-
-    private function ensureBuildDir(string $projectDir, SymfonyStyle $io): void
-    {
-        $buildDir = $projectDir . '/tfsapp_build';
-
-        if (is_dir($buildDir)) {
-            $io->success(sprintf('%s already exists.', $buildDir));
-
-            return;
-        }
-
-        mkdir($buildDir);
-
-        $io->success(sprintf('Created %s', $buildDir));
-    }
-
-    private function ensureGitignore(string $projectDir, SymfonyStyle $io): void
-    {
-        $gitignorePath = $projectDir . '/.gitignore';
-        $entry = '/tfsapp_build/';
-
-        if (!is_file($gitignorePath)) {
-            file_put_contents($gitignorePath, $entry . \PHP_EOL);
-            $io->success(sprintf('Created %s with %s', $gitignorePath, $entry));
-
-            return;
-        }
-
-        $contents = file_get_contents($gitignorePath);
-        $lines = array_map('trim', preg_split('/\R/', $contents ?: ''));
-
-        if (\in_array($entry, $lines, true)) {
-            $io->success(sprintf('%s already ignores %s', $gitignorePath, $entry));
-
-            return;
-        }
-
-        $needsLeadingNewline = '' !== $contents && !str_ends_with($contents, "\n");
-        file_put_contents(
-            $gitignorePath,
-            ($needsLeadingNewline ? \PHP_EOL : '') . $entry . \PHP_EOL,
-            \FILE_APPEND,
-        );
-
-        $io->success(sprintf('Added %s to %s', $entry, $gitignorePath));
     }
 
     private function ensureChangelog(string $projectDir, SymfonyStyle $io): void
@@ -319,41 +271,19 @@ final class InitCommand extends Command
         return $answer;
     }
 
-    private static function releasesRepoValidator(?string $answer): string
-    {
-        if (null === $answer || '' === $answer) {
-            return '';
-        }
-
-        if (preg_match('/^[A-Za-z0-9._-]+(?:\/[A-Za-z0-9._-]+)?$/', $answer) !== 1) {
-            throw new \InvalidArgumentException('releases_repo must be a bare repo name or an owner/repo pair (e.g. myapp or myorg/myapp).');
-        }
-
-        return $answer;
-    }
-
     /**
      * @return array<string, list<string>>
      */
     private static function buildCommands(string $projectDir): array
     {
-        $commands = [
-            'pre-build' => [
-                'composer install --no-dev --no-scripts --optimize-autoloader',
-                'php bin/console cache:clear --env=prod --no-debug',
-                'php bin/console cache:warmup --env=prod --no-debug',
-            ],
-            'post-build' => [
-                'composer install',
-            ],
-        ];
-
-        if (self::isPackageInstalled($projectDir, 'doctrine/doctrine-migrations-bundle')) {
-            $commands['pre-install'] = ['doctrine:migrations:migrate --no-interaction'];
-            $commands['pre-update'] = ['doctrine:migrations:migrate --no-interaction'];
+        if (!self::isPackageInstalled($projectDir, 'doctrine/doctrine-migrations-bundle')) {
+            return [];
         }
 
-        return $commands;
+        return [
+            'pre-install' => ['doctrine:migrations:migrate --no-interaction'],
+            'pre-update' => ['doctrine:migrations:migrate --no-interaction'],
+        ];
     }
 
     private static function isPackageInstalled(string $projectDir, string $packageName): bool
