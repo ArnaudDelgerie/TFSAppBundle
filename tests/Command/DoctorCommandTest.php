@@ -75,8 +75,27 @@ final class DoctorCommandTest extends TestCase
         self::assertSame(0, $tester->getStatusCode());
         self::assertStringContainsString('secrets_available', $tester->getDisplay());
         self::assertStringContainsString('update_check_available', $tester->getDisplay());
+        self::assertMatchesRegularExpression('/update_check_available\s+no/', $tester->getDisplay());
         self::assertStringContainsString('worker_transports', $tester->getDisplay());
         self::assertStringContainsString('(none)', $tester->getDisplay());
+    }
+
+    public function testUpdateCheckAvailableRowMirrorsTheChecker(): void
+    {
+        $tester = $this->createTester(updateCheckerAvailable: true);
+        $tester->execute([]);
+
+        self::assertSame(0, $tester->getStatusCode());
+        self::assertMatchesRegularExpression('/update_check_available\s+yes/', $tester->getDisplay());
+    }
+
+    public function testUpdateCheckUnavailableRowMirrorsTheChecker(): void
+    {
+        $tester = $this->createTester(updateCheckerAvailable: false);
+        $tester->execute([]);
+
+        self::assertSame(0, $tester->getStatusCode());
+        self::assertMatchesRegularExpression('/update_check_available\s+no/', $tester->getDisplay());
     }
 
     public function testDefinedWorkerTransportsDoNotWarn(): void
@@ -380,9 +399,13 @@ final class DoctorCommandTest extends TestCase
     /**
      * @param list<string>|null $receiverTransports
      */
-    private function createTester(?array $receiverTransports = null): CommandTester
+    private function createTester(?array $receiverTransports = null, ?bool $updateCheckerAvailable = null): CommandTester
     {
-        $this->kernel = new DoctorCommandTestKernel($this->projectRoot, receiverTransports: $receiverTransports);
+        $this->kernel = new DoctorCommandTestKernel(
+            $this->projectRoot,
+            receiverTransports: $receiverTransports,
+            updateCheckerAvailable: $updateCheckerAvailable,
+        );
         $this->kernel->boot();
 
         $application = new Application($this->kernel);

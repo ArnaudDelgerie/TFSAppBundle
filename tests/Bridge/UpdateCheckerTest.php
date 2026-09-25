@@ -9,6 +9,7 @@ use ArnaudDelgerie\TFSAppBundle\Bridge\Exception\BridgeUnavailableException;
 use ArnaudDelgerie\TFSAppBundle\Bridge\Exception\UpdateNotEnabledException;
 use ArnaudDelgerie\TFSAppBundle\Bridge\UpdateChecker;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\HttpClient\Exception\TransportException;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
@@ -72,11 +73,52 @@ final class UpdateCheckerTest extends TestCase
         self::assertFalse($checker->isAvailable());
     }
 
-    public function testConfiguredBridgeMakesIsAvailableTrueWithoutNetworkCall(): void
+    public function testIsAvailableProbesTheUpdateRoute(): void
     {
-        $checker = $this->checkerFor(static fn (): MockResponse => self::fail('isAvailable() must not perform a network call.'));
+        $probed = [];
+        $checker = $this->checkerFor(static function (string $method, string $url) use (&$probed): MockResponse {
+            $probed[] = [$method, $url];
+
+            return new MockResponse(
+                '{"status":"ok","current":"1.1.0","latest":"1.2.0","update_available":false,'
+                . '"release_url":"https://github.com/owner/repo/releases/tag/v1.2.0","notes":"Release notes."}',
+                ['http_code' => 200],
+            );
+        });
 
         self::assertTrue($checker->isAvailable());
+        self::assertSame([['GET', 'https://example.com/update/check']], $probed);
+    }
+
+    public function testDisabledUpdateGroupMakesIsAvailableFalse(): void
+    {
+        $checker = $this->checkerFor(static fn (): MockResponse => new MockResponse('{"error":"not_found"}', ['http_code' => 404]));
+
+        self::assertFalse($checker->isAvailable());
+    }
+
+    public function testUnavailableBodyStillMeansTheRouteIsEnabled(): void
+    {
+        $checker = $this->checkerFor(static fn (): MockResponse => new MockResponse(
+            '{"status":"unavailable","reason":"offline"}',
+            ['http_code' => 200],
+        ));
+
+        self::assertTrue($checker->isAvailable());
+    }
+
+    public function testFailedProbeMakesIsAvailableFalse(): void
+    {
+        $checker = $this->checkerFor(static fn (): MockResponse => throw new TransportException('connection refused'));
+
+        self::assertFalse($checker->isAvailable());
+    }
+
+    public function testUnauthorizedBridgeMakesIsAvailableFalse(): void
+    {
+        $checker = $this->checkerFor(static fn (): MockResponse => new MockResponse('{"error":"unauthorized"}', ['http_code' => 401]));
+
+        self::assertFalse($checker->isAvailable());
     }
 
     private function checkerFor(\Closure $responder): UpdateChecker
