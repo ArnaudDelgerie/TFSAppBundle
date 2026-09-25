@@ -140,6 +140,83 @@ final class BackendCloseGuardTest extends TestCase
         $guard->register('export:42');
     }
 
+    public function testRegisterSendsOnlyTheIdToTheRegisterRoute(): void
+    {
+        $captured = [];
+        $guard = $this->capturingGuard($captured);
+
+        $guard->register('export:42');
+
+        self::assertCount(1, $captured);
+        [$method, $url, $body] = $captured[0];
+        self::assertSame('POST', $method);
+        self::assertSame('http://127.0.0.1:12345/close-guard/register', $url);
+        self::assertSame('{"id":"export:42"}', $body);
+    }
+
+    public function testRemoveSendsOnlyTheIdToTheRemoveRoute(): void
+    {
+        $captured = [];
+        $guard = $this->capturingGuard($captured);
+
+        $guard->remove('mail:42');
+
+        self::assertCount(1, $captured);
+        [$method, $url, $body] = $captured[0];
+        self::assertSame('POST', $method);
+        self::assertSame('http://127.0.0.1:12345/close-guard/remove', $url);
+        self::assertSame('{"id":"mail:42"}', $body);
+    }
+
+    public function testRepeatedRegistrationIsIdempotent(): void
+    {
+        $guard = $this->guardFor(static fn (): MockResponse => new MockResponse('{"ok":true}', ['http_code' => 200]));
+
+        self::assertTrue($guard->register('export:42'));
+        self::assertTrue($guard->register('export:42'));
+    }
+
+    public function testRemovingAnAbsentIdIsAcknowledgedHarmlessly(): void
+    {
+        $guard = $this->guardFor(static fn (): MockResponse => new MockResponse('{"ok":true}', ['http_code' => 200]));
+
+        self::assertTrue($guard->remove('export:42'));
+        self::assertTrue($guard->remove('export:42'));
+    }
+
+    public function testRemovingOneIdNeverNamesAnother(): void
+    {
+        $captured = [];
+        $guard = $this->capturingGuard($captured);
+
+        $guard->register('export:probe');
+        $guard->register('mail:probe');
+        $guard->remove('export:probe');
+
+        self::assertCount(3, $captured);
+        self::assertSame('{"id":"export:probe"}', $captured[0][2]);
+        self::assertSame('{"id":"mail:probe"}', $captured[1][2]);
+        // The removal names only its own id: mail:probe's guard survives
+        // export:probe completing, on the hub's side and on ours.
+        self::assertSame('http://127.0.0.1:12345/close-guard/remove', $captured[2][1]);
+        self::assertSame('{"id":"export:probe"}', $captured[2][2]);
+    }
+
+    private function capturingGuard(array &$captured): BackendCloseGuard
+    {
+        $mock = new MockHttpClient(static function (string $method, string $url, array $options) use (&$captured): MockResponse {
+            $captured[] = [$method, $url, $options['body'] ?? ''];
+
+            return new MockResponse('{"ok":true}', ['http_code' => 200]);
+        });
+        $scoped = $mock->withOptions([
+            'base_uri' => 'http://127.0.0.1:12345',
+            'headers' => ['Authorization' => 'Bearer test-token'],
+        ]);
+
+        return new BackendCloseGuard(new BridgeTransport($scoped));
+    }
+
     private function guardFor(\Closure $responder): BackendCloseGuard
     {
         return new BackendCloseGuard(new BridgeTransport(new MockHttpClient($responder)));
