@@ -74,6 +74,25 @@ final class BridgeTransportTest extends TestCase
         (new BridgeTransport($mock))->request('POST', '/secrets/get');
     }
 
+    public function test400WithRouteSpecificErrorCodePassesThroughUnthrown(): void
+    {
+        $mock = new MockHttpClient(static fn (): MockResponse => new MockResponse('{"error":"invalid_id"}', ['http_code' => 400]));
+
+        $response = (new BridgeTransport($mock))->request('POST', '/close-guard/register');
+
+        self::assertSame(400, $response->getStatusCode());
+        self::assertSame('invalid_id', $response->toArray(false)['error']);
+    }
+
+    public function test400WithUnparseableBodyStaysTransportLevel(): void
+    {
+        $mock = new MockHttpClient(static fn (): MockResponse => new MockResponse('<html>Bad Request</html>', ['http_code' => 400]));
+
+        $this->expectException(BridgeProtocolException::class);
+
+        (new BridgeTransport($mock))->request('POST', '/close-guard/register');
+    }
+
     public function test413ThrowsBridgePayloadTooLarge(): void
     {
         $mock = new MockHttpClient(static fn (): MockResponse => new MockResponse('{"error":"payload_too_large"}', ['http_code' => 413]));
