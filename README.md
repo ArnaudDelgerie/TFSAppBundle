@@ -1,10 +1,10 @@
 # TFSAppBundle
 
-Symfony bundle that turns a Symfony app into a local-first desktop app (Tauri + FrankenPHP) — companion bundle to [TFSAppWorkstation](https://github.com/ArnaudDelgerie/TFSAppWorkstation).
+Symfony bundle that turns a Symfony app into a local-first desktop app (Tauri + FrankenPHP) — companion bundle to [TFSAppHub](https://github.com/ArnaudDelgerie/TFSAppHub), the single host.
 
 ## Status
 
-Early stage, no release yet. **v0.1.0 scope**: relocate Symfony's cache/build/log directories to the paths the station's launcher provides (`APP_CACHE_DIR`/`APP_BUILD_DIR`/`APP_LOG_DIR`), expose the `GET /healthz` route the launcher polls before opening its window, and provide a `tfsapp:init` console command to generate the project's `tfsapp.config.json`. See TFSAppWorkstation's `CONTRACT.md` for the full station↔project contract this bundle implements.
+Early stage, no release yet. **v0.1.0 scope**: relocate Symfony's cache/build/log directories to the paths the hub provides (`APP_CACHE_DIR`/`APP_BUILD_DIR`/`APP_LOG_DIR`), expose the `GET /healthz` route the hub polls before opening its window, and provide a `tfsapp:init` console command to generate the project's `tfsapp.config.json`. See TFSAppHub's `CONTRACT.md` for the full hub↔app contract this bundle implements.
 
 ## Requirements
 
@@ -13,10 +13,10 @@ Early stage, no release yet. **v0.1.0 scope**: relocate Symfony's cache/build/lo
 
 ## Usage
 
-Not published yet. Once released: `composer require` this bundle into a Symfony project meant to run under TFSAppWorkstation.
+Not published yet. Once released: `composer require` this bundle into a Symfony project meant to run under TFSAppHub.
 
 Registering the bundle is all it takes: `GET /healthz` (and `HEAD`) then
-answers `200` before routing and security run, per the station contract —
+answers `200` before routing and security run, per the hub contract —
 no configuration, no route to declare. Any other path or method is left
 untouched and reaches the app's own routing as usual.
 
@@ -33,27 +33,67 @@ class Kernel extends TFSAppKernel
 ```
 
 This makes `getCacheDir()`, `getBuildDir()` and `getLogDir()` honour the
-station launcher's `APP_CACHE_DIR`/`APP_BUILD_DIR`/`APP_LOG_DIR` env vars
-when they're set, so the packaged app's read-only mount is never written to.
-When the vars are absent — dev mode, or any environment the launcher doesn't
-control — behavior is unchanged: each dir falls back to Symfony's own
-default under the project's `var/`.
+hub's `APP_CACHE_DIR`/`APP_BUILD_DIR`/`APP_LOG_DIR` env vars
+when they're set, so the installed app's read-only snapshot is never
+written to. When the vars are absent — dev mode, or any environment the
+hub doesn't control — behavior is unchanged: each dir falls back to
+Symfony's own default under the project's `var/`.
 
 ### `tfsapp:init`
 
 Run `bin/console tfsapp:init` from the host app to generate
 `tfsapp.config.json` at the project root (the Symfony kernel's own
-project dir, per the station contract's project layout). It prompts for
+project dir, per the hub contract's project layout). It prompts for
 the four required identity fields — `project_name`, `product_name`,
-`identifier`, `app_version` — each with a sensible derived default;
-pressing Enter accepts the default, invalid input is re-asked rather
-than aborting.
+`identifier`, `app_version` — each with a sensible derived default,
+then one yes/no `workers` question; pressing Enter accepts the default,
+invalid input is re-asked rather than aborting.
 
-The command only ever **creates** the file: if `tfsapp.config.json`
-already exists, it reports the path and exits without prompting or
-overwriting anything. The contract's optional fields (`app_port`,
-`icon_path`, `commands`) aren't part of this prompt flow — add them by
-hand afterwards; their absence keeps the documented defaults.
+The command only ever **creates** files: an existing
+`tfsapp.config.json`, `CHANGELOG.md` or `TFSAPP_README.md` is reported
+and left untouched — existing manifests get migration guidance from
+TFSAppHub's `CONTRACT.md`, not an automatic rewrite.
+
+The scaffold writes only settings today's hub understands: the
+`actions` skeleton declares all five capability groups (`secrets`,
+`update`, `picker`, `close_guard`, `open_files`) with every transport
+false, and no `file_associations` — an app does not claim desktop MIME
+support before its author implements a receiver. `commands` carries
+only `pre-install`/`pre-update` when Doctrine Migrations is installed,
+and is omitted otherwise; there are no build hooks, no `releases_repo`
+and no `tfsapp_build/` directory. The contract's other optional
+fields (`app_port`, `icon_path`, `splash_*`, `run`) aren't part of the
+prompt flow — add them by hand afterwards.
+
+### `open_files`: files, directories, and desktop advertisement
+
+Two independent settings govern directory delivery; enable or disable
+each on its own:
+
+```json
+{
+  "actions": { "open_files": { "ipc": true, "directories": true } },
+  "file_associations": { "mime_types": ["text/markdown", "inode/directory"] }
+}
+```
+
+- `ipc: true` is the receiver: the webview receives local paths through
+  `tfsapp-hub open <id> -- <path>...` or the desktop's "Open with" menu.
+- `directories: true` additionally lets the hub deliver directories
+  through every launch path, the CLI included. Leaving it off keeps the
+  receiver file-only.
+- `inode/directory` in `file_associations.mime_types` is the separate,
+  advertising half: it is what makes the file manager offer the app for
+  a directory. Declaring it without `ipc: true` and `directories: true`
+  is invalid, so disabling directory delivery means removing that MIME
+  value too.
+
+MIME declarations never filter CLI paths and grant no filesystem
+access: a delivered path names something, and reading it stays the app
+backend's business on every path alike. The receiving webview accepts
+each request id idempotently — a reload replays unacknowledged
+requests — and only then acks it. See TFSAppHub's `CONTRACT.md` §7 for
+the wire (`open_files_pending` / `open_files_ack`).
 
 ### Upload storage
 
@@ -91,10 +131,16 @@ Outside the hub (`symfony server:start`, PHPUnit, CI), the root falls back to
 `var/uploads` under the project; `tfsapp:doctor` prints which one is in use and
 whether it is writable.
 
-Inside the hub's window today, a `download()` response is saved straight into
-the OS download directory (the name de-duplicated if taken), with no Save-As
-prompt. That is the hub's current, provisional behaviour, not this bundle's —
-see its `contract/4-the-http-contract.md` — and it may change.
+Inside the hub's window, a `download()` response is saved straight into
+the OS download directory — the name de-duplicated if taken — with no
+Save-As prompt. That is a documented guarantee of the hub's HTTP
+contract (`contract/4-the-http-contract.md`), not this bundle's
+behaviour. An app that wants the person to choose the destination pairs
+`save_path` — a webview IPC call, see TFSAppHub's `CONTRACT.md` §7 —
+with a route of its own that writes the file at the returned path.
+`UploadStorage` cannot write there: it refuses absolute keys by
+design, so the app writes that path itself. `pick_path`'s filters are
+webview IPC too; there is no PHP API for either here.
 
 ## Development
 
