@@ -129,17 +129,19 @@ final class InitCommand extends Command
 
         $contents = '# ' . $productName . \PHP_EOL
             . \PHP_EOL
-            . '`' . $identifier . '` — managed by TFSAppHub; see its `CONTRACT.md` for the hub ↔ project contract.' . \PHP_EOL
+            . '`' . $identifier . '` — installed and run by TFSAppHub; the hub ↔ app contract lives in TFSAppHub\'s `CONTRACT.md` (see that repository).' . \PHP_EOL
             . \PHP_EOL
-            . '## Subcommands' . \PHP_EOL
+            . '## Hub commands' . \PHP_EOL
             . \PHP_EOL
-            . 'Packaged only: run these against the built `./<app>.AppImage`, not `bin/console` — in dev mode each one just prints that and exits `2`.' . \PHP_EOL
+            . 'This app is managed by the `tfsapp-hub` CLI. The handle you type as `<id>` is assigned at install time and shown by `tfsapp-hub list`.' . \PHP_EOL
             . \PHP_EOL
-            . self::renderSubcommands()
+            . self::renderHubCommands()
             . \PHP_EOL
             . '## Optional config fields' . \PHP_EOL
             . \PHP_EOL
-            . '`tfsapp:init` does not scaffold `actions` beyond its all-`false` skeleton, nor `run`, `app_port`, `icon_path`, or `splash_*` — add these to `tfsapp.config.json` by hand when needed. For the `workers` declaration shape, see TFSAppHub\'s `CONTRACT.md` §2.' . \PHP_EOL;
+            . '`tfsapp:init` does not scaffold `actions` beyond its all-`false` skeleton, nor `run`, `app_port`, `icon_path`, or `splash_*` — add these to `tfsapp.config.json` by hand when needed. For the `workers` declaration shape, see TFSAppHub\'s `CONTRACT.md` §2.' . \PHP_EOL
+            . \PHP_EOL
+            . 'This file was written once by `tfsapp:init` and is never refreshed automatically: a later init run leaves it untouched, and later bundle versions do not rewrite it.' . \PHP_EOL;
 
         file_put_contents($readmePath, $contents);
 
@@ -178,20 +180,18 @@ final class InitCommand extends Command
         return [$config['product_name'], $config['identifier']];
     }
 
-    private static function renderSubcommands(): string
+    private static function renderHubCommands(): string
     {
         $lines = [
-            '- `--version` — print the running version and the rollback target.',
-            '- `--help` — print usage and the full subcommand list.',
-            '- `--update` — update the installed app to the latest release.',
-            '- `--rollback` — undo the last update.',
-            '- `--uninstall [--purge]` — remove the app\'s data (and, with `--purge`, its keyring entries too).',
-            '- `--export <path>` — write a backup (database, version, manifest) to `<path>`.',
-            '- `--import <path>` — seed a fresh install\'s data from a backup made with `--export`.',
-            '- `run <alias> [args...]` — run one of this app\'s named `bin/console` aliases in the foreground.',
-            '- `--yes` / `-y` — skip the confirmation prompt on `--update`, `--rollback`, `--uninstall`.',
+            '- `tfsapp-hub open <id>` — open this app\'s window.',
+            '- `tfsapp-hub run <id>` — list this app\'s declared `run` aliases; `tfsapp-hub run <id> <alias> [args...]` runs one in the foreground.',
+            '- `tfsapp-hub update <id> [--ref <tag>] [--force] [--yes]` — re-resolve this app\'s source and update it.',
+            '- `tfsapp-hub rollback <id> [--yes]` — undo the last update, restoring the previous version and database.',
+            '- `tfsapp-hub export <id> <path>` — write this app\'s data to `<path>.tar.gz`.',
+            '- `tfsapp-hub import <id> <path> [--force] [--yes]` — seed this app\'s data from an export.',
+            '- `tfsapp-hub remove <id> [--purge] [--yes]` — uninstall this app; `--purge` also drops its data.',
             '',
-            'This list can drift from the packaged build over time; `./<app>.AppImage --help` is the authoritative one.',
+            'This list can drift as the hub evolves; `tfsapp-hub --help` is the authoritative one.',
         ];
 
         return implode(\PHP_EOL, $lines) . \PHP_EOL;

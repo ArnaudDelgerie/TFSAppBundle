@@ -343,7 +343,7 @@ final class InitCommandTest extends TestCase
         self::assertSame($afterFirstRun, file_get_contents($changelogPath));
     }
 
-    public function testReadmeIsCreatedWithIdentityHeaderAndSubcommandsSection(): void
+    public function testReadmeIsCreatedWithIdentityHeaderAndHubCommandsSection(): void
     {
         $tester = $this->createTester('project');
 
@@ -359,18 +359,19 @@ final class InitCommandTest extends TestCase
 
         self::assertStringContainsString('# Project' . \PHP_EOL, $contents);
         self::assertStringContainsString('`dev.local.project`', $contents);
-        self::assertStringContainsString('managed by TFSAppHub', $contents);
-        self::assertStringContainsString('## Subcommands' . \PHP_EOL, $contents);
-        self::assertStringContainsString('Packaged only', $contents);
-        self::assertStringContainsString('- `--version`', $contents);
-        self::assertStringContainsString('- `--update`', $contents);
-        self::assertStringContainsString('- `--rollback`', $contents);
-        self::assertStringContainsString('- `--uninstall [--purge]`', $contents);
-        self::assertStringContainsString('- `--export <path>`', $contents);
-        self::assertStringContainsString('- `--import <path>`', $contents);
-        self::assertStringContainsString('- `run <alias> [args...]`', $contents);
-        self::assertStringContainsString('- `--yes` / `-y`', $contents);
-        self::assertStringContainsString('./<app>.AppImage --help', $contents);
+        self::assertStringContainsString('installed and run by TFSAppHub', $contents);
+        self::assertStringContainsString('TFSAppHub\'s `CONTRACT.md`', $contents);
+        self::assertStringContainsString('## Hub commands' . \PHP_EOL, $contents);
+        self::assertStringContainsString('`tfsapp-hub list`', $contents);
+        self::assertStringContainsString('- `tfsapp-hub open <id>`', $contents);
+        self::assertStringContainsString('`tfsapp-hub run <id> <alias> [args...]`', $contents);
+        self::assertStringContainsString('- `tfsapp-hub update <id> [--ref <tag>] [--force] [--yes]`', $contents);
+        self::assertStringContainsString('- `tfsapp-hub rollback <id> [--yes]`', $contents);
+        self::assertStringContainsString('- `tfsapp-hub export <id> <path>`', $contents);
+        self::assertStringContainsString('- `tfsapp-hub import <id> <path> [--force] [--yes]`', $contents);
+        self::assertStringContainsString('- `tfsapp-hub remove <id> [--purge] [--yes]`', $contents);
+        self::assertStringContainsString('`tfsapp-hub --help` is the authoritative one', $contents);
+        self::assertStringNotContainsString('AppImage', $contents);
         self::assertStringContainsString('## Optional config fields' . \PHP_EOL, $contents);
         self::assertStringContainsString('`actions`', $contents);
         self::assertStringContainsString('`run`', $contents);
@@ -379,6 +380,7 @@ final class InitCommandTest extends TestCase
         self::assertStringContainsString('`splash_*`', $contents);
         self::assertStringContainsString('`workers` declaration shape', $contents);
         self::assertStringContainsString('TFSAppHub\'s `CONTRACT.md` §2', $contents);
+        self::assertStringContainsString('written once by `tfsapp:init` and is never refreshed automatically', $contents);
     }
 
     public function testExistingReadmeIsLeftUntouched(): void
