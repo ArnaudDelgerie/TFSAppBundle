@@ -185,7 +185,47 @@ final class InitCommandTest extends TestCase
         $tester->execute([]);
 
         self::assertSame(0, $tester->getStatusCode());
-        self::assertSame(self::actionsSkeleton(), $this->readConfig()['actions']);
+        $config = $this->readConfig();
+
+        self::assertSame(self::actionsSkeleton(), $config['actions']);
+        self::assertSame(
+            ['secrets', 'update', 'picker', 'close_guard', 'open_files'],
+            array_keys($config['actions']),
+        );
+        self::assertArrayNotHasKey('bridge', $config['actions']['picker']);
+        self::assertArrayNotHasKey('bridge', $config['actions']['open_files']);
+        self::assertArrayNotHasKey('file_associations', $config);
+        foreach ($config['actions'] as $group) {
+            self::assertNotContains(true, $group, 'every declared member must default to false');
+        }
+    }
+
+    public function testGeneratedConfigDecodesWithNoUnsupportedTransportOrDirectoryMimePairing(): void
+    {
+        $tester = $this->createTester('project');
+
+        $tester->setInputs(['', '', '', '', '']);
+        $tester->execute([]);
+
+        self::assertSame(0, $tester->getStatusCode());
+
+        $config = json_decode(
+            (string) file_get_contents($this->projectRoot . '/tfsapp.config.json'),
+            true,
+            flags: \JSON_THROW_ON_ERROR,
+        );
+
+        $ipcOnlyGroups = ['picker', 'open_files'];
+
+        foreach ($ipcOnlyGroups as $group) {
+            self::assertArrayNotHasKey('bridge', $config['actions'][$group], sprintf('%s has no bridge transport', $group));
+        }
+
+        self::assertArrayNotHasKey('directories', $config['actions']['secrets']);
+        self::assertArrayNotHasKey('keys', $config['actions']['update']);
+
+        // A receiver that has not opted in must not claim desktop MIME support.
+        self::assertArrayNotHasKey('file_associations', $config);
     }
 
     public function testExistingFileIsLeftUntouchedAndCommandStillRunsToCompletion(): void
@@ -436,6 +476,17 @@ final class InitCommandTest extends TestCase
             'update' => [
                 'ipc' => false,
                 'bridge' => false,
+            ],
+            'picker' => [
+                'ipc' => false,
+            ],
+            'close_guard' => [
+                'ipc' => false,
+                'bridge' => false,
+            ],
+            'open_files' => [
+                'ipc' => false,
+                'directories' => false,
             ],
         ];
     }

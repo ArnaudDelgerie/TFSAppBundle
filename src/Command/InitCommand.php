@@ -336,6 +336,17 @@ final class InitCommand extends Command
                 'ipc' => false,
                 'bridge' => false,
             ],
+            'picker' => [
+                'ipc' => false,
+            ],
+            'close_guard' => [
+                'ipc' => false,
+                'bridge' => false,
+            ],
+            'open_files' => [
+                'ipc' => false,
+                'directories' => false,
+            ],
         ];
     }
 }
