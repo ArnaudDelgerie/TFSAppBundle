@@ -58,7 +58,7 @@ final class BackendCloseGuard implements BackendCloseGuardInterface
 
         return match ($response->getStatusCode()) {
             200 => true,
-            400 => throw CloseGuardInvalidIdException::forId($id), // invalid_body never reaches here: the transport throws it
+            400 => throw CloseGuardInvalidIdException::forId($id), // the transport forwards only these routes' invalid_id
             404 => false, // the close_guard group did not declare "bridge": its routes are gated
             429 => throw CloseGuardTooManyException::create(),
             503 => throw CloseGuardClosingException::create(),

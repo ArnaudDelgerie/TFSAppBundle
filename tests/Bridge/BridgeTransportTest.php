@@ -84,6 +84,24 @@ final class BridgeTransportTest extends TestCase
         self::assertSame('invalid_id', $response->toArray(false)['error']);
     }
 
+    public function test400WithUnknownErrorCodeOnCloseGuardRouteStaysTransportLevel(): void
+    {
+        $mock = new MockHttpClient(static fn (): MockResponse => new MockResponse('{"error":"boom"}', ['http_code' => 400]));
+
+        $this->expectException(BridgeProtocolException::class);
+
+        (new BridgeTransport($mock))->request('POST', '/close-guard/register');
+    }
+
+    public function test400WithInvalidIdCodeOnAnotherRouteStaysTransportLevel(): void
+    {
+        $mock = new MockHttpClient(static fn (): MockResponse => new MockResponse('{"error":"invalid_id"}', ['http_code' => 400]));
+
+        $this->expectException(BridgeProtocolException::class);
+
+        (new BridgeTransport($mock))->request('POST', '/secrets/has');
+    }
+
     public function test400WithUnparseableBodyStaysTransportLevel(): void
     {
         $mock = new MockHttpClient(static fn (): MockResponse => new MockResponse('<html>Bad Request</html>', ['http_code' => 400]));

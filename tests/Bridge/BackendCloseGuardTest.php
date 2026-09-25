@@ -77,6 +77,15 @@ final class BackendCloseGuardTest extends TestCase
         $guard->register('export:42');
     }
 
+    public function testUnknown400ErrorIsNeverMistakenForAnInvalidId(): void
+    {
+        $guard = $this->guardFor(static fn (): MockResponse => new MockResponse('{"error":"boom"}', ['http_code' => 400]));
+
+        $this->expectException(BridgeProtocolException::class);
+
+        $guard->register('export:42');
+    }
+
     public function testUnauthorizedThrowsBridgeProtocolException(): void
     {
         $guard = $this->guardFor(static fn (): MockResponse => new MockResponse('{"error":"unauthorized"}', ['http_code' => 401]));

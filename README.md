@@ -165,7 +165,9 @@ final class ExportHandler
     {
         $id = 'export:' . $job->getId(); // distinct ids for simultaneous jobs
 
-        if (!$this->guards->register($id)) {
+        $guarded = $this->guards->register($id);
+
+        if (!$guarded) {
             // No guard installed: no bridge at all, or the close_guard
             // group's routes are gated — never a claim of protection.
             // Run unguarded, or refuse the work.
@@ -174,7 +176,9 @@ final class ExportHandler
         try {
             // the vulnerable work
         } finally {
-            $this->guards->remove($id); // the owner removes its own guard
+            if ($guarded) {
+                $this->guards->remove($id); // the owner removes its own guard
+            }
         }
     }
 }

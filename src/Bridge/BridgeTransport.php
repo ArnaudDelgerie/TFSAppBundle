@@ -18,12 +18,15 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
  * Maps the universal, route-agnostic wire errors (401 bad token, 413 body
  * cap, 400 invalid body) to typed exceptions here; route-specific ambiguous
  * ones (404, 403) are left for the caller to interpret with its own context.
- * A 400 is route-specific when its body carries any error other than the
- * transport's own invalid_body (the close-guard routes' invalid_id today)
- * and passes through the same way.
+ * A 400 passes through only on the close-guard routes and only when its body
+ * carries their invalid_id — every other 400, known or not, stays the
+ * generic protocol error so an unexpected answer can never be mistaken for
+ * a documented route error.
  */
 final class BridgeTransport
 {
+    private const CLOSE_GUARD_ROUTES = ['/close-guard/register', '/close-guard/remove'];
+
     public function __construct(private readonly ?HttpClientInterface $client)
     {
     }
@@ -46,7 +49,7 @@ final class BridgeTransport
 
         return match ($response->getStatusCode()) {
             401 => throw BridgeProtocolException::forStatus(401),
-            400 => $this->hasRouteSpecificError($response)
+            400 => (\in_array($path, self::CLOSE_GUARD_ROUTES, true) && $this->hasError($response, 'invalid_id'))
                 ? $response
                 : throw BridgeProtocolException::forStatus(400),
             413 => throw BridgePayloadTooLargeException::create(),
@@ -55,19 +58,16 @@ final class BridgeTransport
     }
 
     /**
-     * True when this 400's body names a route-specific error code rather
-     * than the transport's own invalid_body. An unparseable body stays
-     * transport-level: the generic mapping must never let a malformed
-     * error slip through unthrown.
+     * True when this 400's body names exactly the expected error code. An
+     * unparseable body or any other code stays transport-level: the generic
+     * mapping must never let a malformed or unknown error pass through.
      */
-    private function hasRouteSpecificError(ResponseInterface $response): bool
+    private function hasError(ResponseInterface $response, string $error): bool
     {
         try {
-            $error = $response->toArray(false)['error'] ?? null;
+            return ($response->toArray(false)['error'] ?? null) === $error;
         } catch (\Throwable) {
             return false;
         }
-
-        return \is_string($error) && 'invalid_body' !== $error;
     }
 }
