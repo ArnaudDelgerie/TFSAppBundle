@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace ArnaudDelgerie\TFSAppBundle\StationContext;
+namespace ArnaudDelgerie\TFSAppBundle\HubContext;
 
-final class StationContext implements StationContextInterface
+final class HubContext implements HubContextInterface
 {
     public function __construct(
         private readonly string $identifier,
@@ -14,7 +14,7 @@ final class StationContext implements StationContextInterface
         private readonly array $workerTransports,
         private readonly bool $keyringAvailable,
         private readonly bool $bridgeEnabled,
-        private readonly bool $runningUnderStation,
+        private readonly bool $runningUnderHub,
     ) {
     }
 
@@ -48,8 +48,8 @@ final class StationContext implements StationContextInterface
         return $this->bridgeEnabled;
     }
 
-    public function isRunningUnderStation(): bool
+    public function isRunningUnderHub(): bool
     {
-        return $this->runningUnderStation;
+        return $this->runningUnderHub;
     }
 }

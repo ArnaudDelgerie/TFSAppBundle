@@ -44,7 +44,7 @@ final class DoctorCommandTest extends TestCase
         self::removeDir($this->baseDir);
     }
 
-    public function testOutputCarriesStationContextAndAvailabilityLines(): void
+    public function testOutputCarriesHubContextAndAvailabilityLines(): void
     {
         putenv('TFS_APP_IDENTIFIER=dev.local.demo-project');
         putenv('TFS_APP_VERSION=1.2.3');

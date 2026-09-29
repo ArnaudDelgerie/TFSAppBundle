@@ -7,6 +7,7 @@ namespace ArnaudDelgerie\TFSAppBundle\Bridge;
 use ArnaudDelgerie\TFSAppBundle\Bridge\Exception\BridgeUnavailableException;
 use ArnaudDelgerie\TFSAppBundle\Bridge\Exception\SecretKeyNotDeclaredException;
 use ArnaudDelgerie\TFSAppBundle\Bridge\Exception\SecretsNotEnabledException;
+use ArnaudDelgerie\TFSAppBundle\Bridge\Exception\SecretStorageFailedException;
 
 interface SecretStoreInterface
 {
@@ -21,12 +22,14 @@ interface SecretStoreInterface
      *
      * @throws BridgeUnavailableException
      * @throws SecretsNotEnabledException
+     * @throws SecretStorageFailedException the hub's storage failed (500 storage_failed); nothing was read or written
      */
     public function keys(): array;
 
     /**
      * @throws BridgeUnavailableException
      * @throws SecretsNotEnabledException
+     * @throws SecretStorageFailedException the hub's storage failed (500 storage_failed); nothing was read or written
      */
     public function has(string $key): bool;
 
@@ -35,6 +38,7 @@ interface SecretStoreInterface
      *
      * @throws BridgeUnavailableException
      * @throws SecretsNotEnabledException
+     * @throws SecretStorageFailedException the hub's storage failed (500 storage_failed); nothing was read or written
      * @throws SecretKeyNotDeclaredException
      */
     public function get(string $key): ?string;
@@ -42,6 +46,7 @@ interface SecretStoreInterface
     /**
      * @throws BridgeUnavailableException
      * @throws SecretsNotEnabledException
+     * @throws SecretStorageFailedException the hub's storage failed (500 storage_failed); nothing was read or written
      * @throws SecretKeyNotDeclaredException
      */
     public function set(string $key, string $value): void;
@@ -51,6 +56,7 @@ interface SecretStoreInterface
      *
      * @throws BridgeUnavailableException
      * @throws SecretsNotEnabledException
+     * @throws SecretStorageFailedException the hub's storage failed (500 storage_failed); nothing was read or written
      * @throws SecretKeyNotDeclaredException
      */
     public function delete(string $key): bool;

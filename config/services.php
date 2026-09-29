@@ -13,9 +13,9 @@ use ArnaudDelgerie\TFSAppBundle\Bridge\UpdateCheckerInterface;
 use ArnaudDelgerie\TFSAppBundle\Command\DoctorCommand;
 use ArnaudDelgerie\TFSAppBundle\Command\InitCommand;
 use ArnaudDelgerie\TFSAppBundle\EventListener\HealthzListener;
-use ArnaudDelgerie\TFSAppBundle\StationContext\StationContext;
-use ArnaudDelgerie\TFSAppBundle\StationContext\StationContextFactory;
-use ArnaudDelgerie\TFSAppBundle\StationContext\StationContextInterface;
+use ArnaudDelgerie\TFSAppBundle\HubContext\HubContext;
+use ArnaudDelgerie\TFSAppBundle\HubContext\HubContextFactory;
+use ArnaudDelgerie\TFSAppBundle\HubContext\HubContextInterface;
 use ArnaudDelgerie\TFSAppBundle\Storage\UploadStorage;
 use ArnaudDelgerie\TFSAppBundle\Storage\UploadStorageInterface;
 use ArnaudDelgerie\TFSAppBundle\Twig\TfsAppTwigGlobal;
@@ -44,16 +44,16 @@ return static function (ContainerConfigurator $container): void {
         ->tag('console.command');
 
     $container->services()
-        ->set(StationContextFactory::class)
+        ->set(HubContextFactory::class)
         ->autowire();
 
     $container->services()
-        ->set(StationContext::class)
-        ->factory([service(StationContextFactory::class), 'create'])
+        ->set(HubContext::class)
+        ->factory([service(HubContextFactory::class), 'create'])
         ->autowire();
 
     $container->services()
-        ->alias(StationContextInterface::class, StationContext::class);
+        ->alias(HubContextInterface::class, HubContext::class);
 
     $container->services()
         ->set(BridgeTransportFactory::class)

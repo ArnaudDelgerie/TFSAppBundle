@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace ArnaudDelgerie\TFSAppBundle\StationContext;
+namespace ArnaudDelgerie\TFSAppBundle\HubContext;
 
-interface StationContextInterface
+interface HubContextInterface
 {
     public function identifier(): string;
 
@@ -23,5 +23,5 @@ interface StationContextInterface
 
     public function isBridgeEnabled(): bool;
 
-    public function isRunningUnderStation(): bool;
+    public function isRunningUnderHub(): bool;
 }

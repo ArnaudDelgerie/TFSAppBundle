@@ -4,7 +4,7 @@ Symfony bundle that turns a Symfony app into a local-first desktop app (Tauri + 
 
 ## Status
 
-Early stage, no release yet. **v0.1.0 scope**: relocate Symfony's cache/build/log directories to the paths the hub provides (`APP_CACHE_DIR`/`APP_BUILD_DIR`/`APP_LOG_DIR`), expose the `GET /healthz` route the hub polls before opening its window, and provide a `tfsapp:init` console command to generate the project's `tfsapp.config.json`. See TFSAppHub's `CONTRACT.md` for the full hub↔app contract this bundle implements.
+Early stage, no release yet. The bundle covers what an app needs to run under the hub: the kernel dir relocation, `GET /healthz`, `tfsapp:init` and `tfsapp:doctor`, the hub context (`HubContextInterface` and the `tfsapp` Twig global), SQLite pragmas on every connection, the bridge services (secrets, update check, backend close guards) and upload storage. See TFSAppHub's `CONTRACT.md` for the full hub↔app contract this bundle implements.
 
 ## Requirements
 
@@ -64,6 +64,59 @@ and is omitted otherwise; there are no build hooks, no `releases_repo`
 and no `tfsapp_build/` directory. The contract's other optional
 fields (`app_port`, `icon_path`, `splash_*`, `run`) aren't part of the
 prompt flow — add them by hand afterwards.
+
+### Hub context
+
+`HubContextInterface` reads what the hub injects into the app's environment
+(CONTRACT.md §3) once, and exposes it: `identifier()`, `version()`,
+`isAsyncWorker()`, `workerTransports()`, `isKeyringAvailable()`,
+`isBridgeEnabled()` and `isRunningUnderHub()`. What it exposes is a
+capability, never the host: use it to warn the person or hide a feature, not
+to branch business logic. Outside the hub every value is empty or false.
+
+The same values are available in Twig as the `tfsapp` global
+(`tfsapp.version`, `tfsapp.async_worker`, `tfsapp.worker_transports`,
+`tfsapp.keyring_available`, `tfsapp.bridge_enabled`,
+`tfsapp.running_under_hub`) when Twig is installed.
+
+### Bundle configuration
+
+Both options default to `true`; set one to `false` in
+`config/packages/tfs_app.yaml` to opt out:
+
+```yaml
+tfs_app:
+    twig_globals: true    # register the `tfsapp` Twig global
+    sqlite_pragmas: true  # assert the SQLite pragmas below on every connection
+```
+
+### SQLite pragmas
+
+`DATABASE_URL` is always a SQLite file the host injects, and Doctrine sets none
+of the pragmas that make that workable. Left alone, the file stays in
+rollback-journal mode, where any writer blocks every reader: the Messenger
+worker's transaction would stall the web process serving the window. With
+`sqlite_pragmas` on, a DBAL middleware issues `PRAGMA journal_mode=WAL`,
+`PRAGMA synchronous=NORMAL` (only crash-safe under WAL, hence the pair) and
+`PRAGMA busy_timeout=5000` on every SQLite connection, and only on SQLite — any
+other platform is untouched. It runs per connection rather than once because
+an import or rescue can restore the database without its `-wal` file, so it can
+come back in rollback-journal mode.
+
+`busy_timeout` does not cover `SQLITE_BUSY_SNAPSHOT`; that case is already
+retried upstream by Messenger's Doctrine transport, so nothing here retries it.
+Turn the option off if your project tunes its own connection.
+
+### `tfsapp:doctor`
+
+`bin/console tfsapp:doctor` prints what the app resolved at runtime: the hub
+context, whether secrets and update checks are reachable through the bridge,
+the effective `DATABASE_URL` and — for a SQLite file — whether it exists, holds
+tables, and which `journal_mode` and `busy_timeout` apply, plus the upload
+directory and whether it is writable. It also warns when the hub consumes
+Messenger transports the app does not configure, and about off-origin assets in `templates/` (the
+FrankenPHP hot-reload block Flex scaffolds is the usual one; the hub's CSP
+allows only `'self'`).
 
 ### `open_files`: files, directories, and desktop advertisement
 

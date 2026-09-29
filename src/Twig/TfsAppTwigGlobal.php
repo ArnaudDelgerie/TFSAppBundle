@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace ArnaudDelgerie\TFSAppBundle\Twig;
 
-use ArnaudDelgerie\TFSAppBundle\StationContext\StationContextInterface;
+use ArnaudDelgerie\TFSAppBundle\HubContext\HubContextInterface;
 
 final class TfsAppTwigGlobal
 {
@@ -19,17 +19,17 @@ final class TfsAppTwigGlobal
     /** @var list<string> */
     public readonly array $worker_transports;
 
-    public readonly bool $running_under_station;
+    public readonly bool $running_under_hub;
 
     public readonly bool $bridge_enabled;
 
-    public function __construct(StationContextInterface $context)
+    public function __construct(HubContextInterface $context)
     {
         $this->version = $context->version();
         $this->keyring_available = $context->isKeyringAvailable();
         $this->async_worker = $context->isAsyncWorker();
         $this->worker_transports = $context->workerTransports();
-        $this->running_under_station = $context->isRunningUnderStation();
+        $this->running_under_hub = $context->isRunningUnderHub();
         $this->bridge_enabled = $context->isBridgeEnabled();
     }
 }

@@ -7,7 +7,7 @@ namespace ArnaudDelgerie\TFSAppBundle\Command;
 use ArnaudDelgerie\TFSAppBundle\Bridge\SecretStoreInterface;
 use ArnaudDelgerie\TFSAppBundle\Bridge\UpdateCheckerInterface;
 use ArnaudDelgerie\TFSAppBundle\Doctrine\SqlitePragmas;
-use ArnaudDelgerie\TFSAppBundle\StationContext\StationContextInterface;
+use ArnaudDelgerie\TFSAppBundle\HubContext\HubContextInterface;
 use ArnaudDelgerie\TFSAppBundle\Storage\UploadStorageInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -17,11 +17,11 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\HttpKernel\KernelInterface;
 use Symfony\Contracts\Service\ServiceCollectionInterface;
 
-#[AsCommand(name: 'tfsapp:doctor', description: 'Print the resolved station context and bridge availability')]
+#[AsCommand(name: 'tfsapp:doctor', description: 'Print the resolved hub context and bridge availability')]
 final class DoctorCommand extends Command
 {
     public function __construct(
-        private readonly StationContextInterface $context,
+        private readonly HubContextInterface $context,
         private readonly SecretStoreInterface $secretStore,
         private readonly UpdateCheckerInterface $updateChecker,
         private readonly UploadStorageInterface $uploadStorage,
@@ -38,7 +38,7 @@ final class DoctorCommand extends Command
         $rows = [
             ['identifier', $this->context->identifier()],
             ['version', $this->context->version()],
-            ['running_under_station', self::formatBool($this->context->isRunningUnderStation())],
+            ['running_under_hub', self::formatBool($this->context->isRunningUnderHub())],
             ['async_worker', self::formatBool($this->context->isAsyncWorker())],
             ['worker_transports', implode(', ', $this->context->workerTransports()) ?: '(none)'],
             ['keyring_available', self::formatBool($this->context->isKeyringAvailable())],
@@ -163,8 +163,8 @@ final class DoctorCommand extends Command
         if (!$fileExists) {
             return [$rows, sprintf(
                 'SQLite database file does not exist: %s'
-                . ' — nothing has migrated it yet for this run (CONTRACT.md §3: '
-                . '"make tauri-dev" ignores "commands", so the station-injected DATABASE_URL never gets its schema in dev mode).',
+                . ' — nothing has migrated it yet for this run (CONTRACT.md §9: '
+                . '"dev" never runs "pre-install", so run your own console\'s migrations against the injected DATABASE_URL).',
                 $path,
             )];
         }
@@ -333,7 +333,7 @@ final class DoctorCommand extends Command
 
         $io->warning(sprintf(
             'Off-origin assets found under templates/: %s'
-            . ' — CONTRACT.md §4 forbids anything but \'self\' under the station\'s CSP.'
+            . ' — CONTRACT.md §4 forbids anything but \'self\' under the hub\'s CSP.'
             . ' This is typically the FrankenPHP hot-reload block Flex scaffolds at the end of base.html.twig; remove it before packaging.',
             implode(', ', $offenders),
         ));

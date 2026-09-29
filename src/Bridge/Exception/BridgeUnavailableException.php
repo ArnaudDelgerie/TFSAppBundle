@@ -8,6 +8,6 @@ final class BridgeUnavailableException extends BridgeException
 {
     public static function noBridge(): self
     {
-        return new self('No TFS bridge is available: running outside the station, or no "actions" group declared "bridge" in tfsapp.config.json.');
+        return new self('No TFS bridge is available: running outside the hub, or no "actions" group declared "bridge" in tfsapp.config.json.');
     }
 }
