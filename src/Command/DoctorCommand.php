@@ -163,8 +163,8 @@ final class DoctorCommand extends Command
         if (!$fileExists) {
             return [$rows, sprintf(
                 'SQLite database file does not exist: %s'
-                . ' — nothing has migrated it yet for this run (CONTRACT.md §3: '
-                . '"make tauri-dev" ignores "commands", so the hub-injected DATABASE_URL never gets its schema in dev mode).',
+                . ' — nothing has migrated it yet for this run (CONTRACT.md §9: '
+                . '"dev" never runs "pre-install", so run your own console\'s migrations against the injected DATABASE_URL).',
                 $path,
             )];
         }

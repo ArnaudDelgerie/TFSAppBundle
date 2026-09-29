@@ -17,8 +17,9 @@ abstract class TFSAppKernel extends Kernel
     public function getBuildDir(): string
     {
         // Symfony's build/share dir defaults to inside the project, which is
-        // read-only when the app is packaged under resources/. Honor an explicit
-        // app-data path so nothing writes into the bundled sources at runtime.
+        // the installed snapshot — replaced wholesale by the next update
+        // (CONTRACT.md §1). Honor an explicit app-data path so nothing writes
+        // into it at runtime.
         return $_SERVER['APP_BUILD_DIR'] ?? parent::getBuildDir();
     }
 
