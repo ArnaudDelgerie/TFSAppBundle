@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace ArnaudDelgerie\TFSAppBundle\StationContext;
+namespace ArnaudDelgerie\TFSAppBundle\HubContext;
 
-final class StationContextFactory
+final class HubContextFactory
 {
     /**
      * @param (\Closure(): array<string, string>)|null $envReader defaults to
@@ -15,21 +15,21 @@ final class StationContextFactory
     {
     }
 
-    public function create(): StationContextInterface
+    public function create(): HubContextInterface
     {
         $reader = $this->envReader ?? static fn (): array => getenv();
         $env = $reader();
 
         $version = self::stringValue($env, 'TFS_APP_VERSION');
 
-        return new StationContext(
+        return new HubContext(
             identifier: self::stringValue($env, 'TFS_APP_IDENTIFIER'),
             version: $version,
             asyncWorker: self::isFlagSet($env, 'TFS_ASYNC_WORKER'),
             workerTransports: self::workerTransports($env),
             keyringAvailable: self::isFlagSet($env, 'TFS_KEYRING_AVAILABLE'),
             bridgeEnabled: '' !== self::stringValue($env, 'TFS_BRIDGE_URL'),
-            runningUnderStation: '' !== $version,
+            runningUnderHub: '' !== $version,
         );
     }
 

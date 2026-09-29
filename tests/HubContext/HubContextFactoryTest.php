@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace ArnaudDelgerie\TFSAppBundle\Tests\StationContext;
+namespace ArnaudDelgerie\TFSAppBundle\Tests\HubContext;
 
-use ArnaudDelgerie\TFSAppBundle\StationContext\StationContextFactory;
+use ArnaudDelgerie\TFSAppBundle\HubContext\HubContextFactory;
 use PHPUnit\Framework\TestCase;
 
-final class StationContextFactoryTest extends TestCase
+final class HubContextFactoryTest extends TestCase
 {
     public function testFullEnvIsReflectedByEveryGetter(): void
     {
-        $context = (new StationContextFactory(static fn (): array => [
+        $context = (new HubContextFactory(static fn (): array => [
             'TFS_APP_IDENTIFIER' => 'dev.local.demo-project',
             'TFS_APP_VERSION' => '1.2.3',
             'TFS_ASYNC_WORKER' => '1',
@@ -26,12 +26,12 @@ final class StationContextFactoryTest extends TestCase
         self::assertSame(['urgent', 'scheduled', 'background'], $context->workerTransports());
         self::assertTrue($context->isKeyringAvailable());
         self::assertTrue($context->isBridgeEnabled());
-        self::assertTrue($context->isRunningUnderStation());
+        self::assertTrue($context->isRunningUnderHub());
     }
 
     public function testEmptyEnvFallsBackToSafeDefaults(): void
     {
-        $context = (new StationContextFactory(static fn (): array => []))->create();
+        $context = (new HubContextFactory(static fn (): array => []))->create();
 
         self::assertSame('', $context->identifier());
         self::assertSame('', $context->version());
@@ -39,12 +39,12 @@ final class StationContextFactoryTest extends TestCase
         self::assertSame([], $context->workerTransports());
         self::assertFalse($context->isKeyringAvailable());
         self::assertFalse($context->isBridgeEnabled());
-        self::assertFalse($context->isRunningUnderStation());
+        self::assertFalse($context->isRunningUnderHub());
     }
 
     public function testKeyringFlagAtZeroIsFalse(): void
     {
-        $context = (new StationContextFactory(static fn (): array => [
+        $context = (new HubContextFactory(static fn (): array => [
             'TFS_APP_VERSION' => '1.0.0',
             'TFS_KEYRING_AVAILABLE' => '0',
         ]))->create();
@@ -54,7 +54,7 @@ final class StationContextFactoryTest extends TestCase
 
     public function testAsyncWorkerFlagAtOneIsTrue(): void
     {
-        $context = (new StationContextFactory(static fn (): array => [
+        $context = (new HubContextFactory(static fn (): array => [
             'TFS_APP_VERSION' => '1.0.0',
             'TFS_ASYNC_WORKER' => '1',
         ]))->create();
@@ -64,7 +64,7 @@ final class StationContextFactoryTest extends TestCase
 
     public function testWorkerTransportsAreTrimmedAndKeepTheirDeclarationOrder(): void
     {
-        $context = (new StationContextFactory(static fn (): array => [
+        $context = (new HubContextFactory(static fn (): array => [
             'TFS_WORKER_TRANSPORTS' => ' urgent, scheduled , background, ',
         ]))->create();
 
@@ -73,7 +73,7 @@ final class StationContextFactoryTest extends TestCase
 
     public function testWorkerTransportsDoNotSetTheAsyncWorkerFlag(): void
     {
-        $context = (new StationContextFactory(static fn (): array => [
+        $context = (new HubContextFactory(static fn (): array => [
             'TFS_WORKER_TRANSPORTS' => 'urgent',
         ]))->create();
 
@@ -83,7 +83,7 @@ final class StationContextFactoryTest extends TestCase
 
     public function testBridgeUrlPresentEnablesBridge(): void
     {
-        $context = (new StationContextFactory(static fn (): array => [
+        $context = (new HubContextFactory(static fn (): array => [
             'TFS_BRIDGE_URL' => 'http://127.0.0.1:54321',
         ]))->create();
 
@@ -92,7 +92,7 @@ final class StationContextFactoryTest extends TestCase
 
     public function testBridgeUrlAbsentDisablesBridge(): void
     {
-        $context = (new StationContextFactory(static fn (): array => [
+        $context = (new HubContextFactory(static fn (): array => [
             'TFS_APP_VERSION' => '1.0.0',
         ]))->create();
 
@@ -104,7 +104,7 @@ final class StationContextFactoryTest extends TestCase
         putenv('TFS_APP_IDENTIFIER=dev.local.real-env-test');
 
         try {
-            $context = (new StationContextFactory())->create();
+            $context = (new HubContextFactory())->create();
 
             self::assertSame('dev.local.real-env-test', $context->identifier());
         } finally {

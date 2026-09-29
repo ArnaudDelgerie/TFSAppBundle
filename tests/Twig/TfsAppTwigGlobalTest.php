@@ -33,7 +33,7 @@ final class TfsAppTwigGlobalTest extends TestCase
         putenv('TFS_BRIDGE_URL');
     }
 
-    public function testGlobalResolvesToTheStationContextWhenTwigIsPresent(): void
+    public function testGlobalResolvesToTheHubContextWhenTwigIsPresent(): void
     {
         $this->kernel = new TwigGlobalTestKernel();
         $this->kernel->boot();
@@ -49,7 +49,7 @@ final class TfsAppTwigGlobalTest extends TestCase
         self::assertSame(['urgent', 'scheduled', 'background'], $global->worker_transports);
         self::assertTrue($global->keyring_available);
         self::assertTrue($global->bridge_enabled);
-        self::assertTrue($global->running_under_station);
+        self::assertTrue($global->running_under_hub);
     }
 
     public function testGlobalIsNotRegisteredWhenToggledOff(): void
