@@ -6,6 +6,7 @@ namespace ArnaudDelgerie\TFSAppBundle\Bridge;
 
 use ArnaudDelgerie\TFSAppBundle\Bridge\Exception\BridgeUnavailableException;
 use ArnaudDelgerie\TFSAppBundle\Bridge\Exception\SecretKeyNotDeclaredException;
+use ArnaudDelgerie\TFSAppBundle\Bridge\Exception\SecretStorageFailedException;
 use ArnaudDelgerie\TFSAppBundle\Bridge\Exception\SecretsNotEnabledException;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
@@ -42,7 +43,7 @@ final class SecretStore implements SecretStoreInterface
         $this->ensureAvailable();
 
         /** @var array{keys: list<array{key: string, set: bool}>} $data */
-        $data = $this->transport->request('GET', '/secrets/keys')->toArray();
+        $data = $this->assertStored($this->transport->request('GET', '/secrets/keys'))->toArray();
 
         return array_map(
             static fn (array $entry): SecretKey => new SecretKey($entry['key'], $entry['set']),
@@ -64,7 +65,7 @@ final class SecretStore implements SecretStoreInterface
     {
         $this->ensureAvailable();
 
-        $response = $this->transport->request('POST', '/secrets/get', ['json' => ['key' => $key]]);
+        $response = $this->assertStored($this->transport->request('POST', '/secrets/get', ['json' => ['key' => $key]]));
 
         return match ($response->getStatusCode()) {
             404 => null, // declared-but-unset — availability already confirmed above
@@ -99,6 +100,28 @@ final class SecretStore implements SecretStoreInterface
 
         if (403 === $response->getStatusCode()) {
             throw SecretKeyNotDeclaredException::forKey($key);
+        }
+
+        return $this->assertStored($response);
+    }
+
+    /**
+     * Contract §7: a 500 is the hub's secret storage failing, and its body
+     * names it. Any other 500 is not a documented answer and is left to the
+     * HttpClient as before.
+     */
+    private function assertStored(ResponseInterface $response): ResponseInterface
+    {
+        if (500 === $response->getStatusCode()) {
+            try {
+                $storageFailed = ($response->toArray(false)['error'] ?? null) === 'storage_failed';
+            } catch (\Throwable) {
+                $storageFailed = false;
+            }
+
+            if ($storageFailed) {
+                throw SecretStorageFailedException::create();
+            }
         }
 
         return $response;

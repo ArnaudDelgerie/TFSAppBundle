@@ -9,6 +9,7 @@ use ArnaudDelgerie\TFSAppBundle\Bridge\Exception\BridgePayloadTooLargeException;
 use ArnaudDelgerie\TFSAppBundle\Bridge\Exception\BridgeUnavailableException;
 use ArnaudDelgerie\TFSAppBundle\Bridge\Exception\SecretKeyNotDeclaredException;
 use ArnaudDelgerie\TFSAppBundle\Bridge\Exception\SecretsNotEnabledException;
+use ArnaudDelgerie\TFSAppBundle\Bridge\Exception\SecretStorageFailedException;
 use ArnaudDelgerie\TFSAppBundle\Bridge\SecretKey;
 use ArnaudDelgerie\TFSAppBundle\Bridge\SecretStore;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -167,6 +168,24 @@ final class SecretStoreTest extends TestCase
         $this->expectException(BridgePayloadTooLargeException::class);
 
         $store->set('openai', str_repeat('x', 9000));
+    }
+
+    #[DataProvider('operationsProvider')]
+    public function test500StorageFailedThrowsSecretStorageFailedOnEveryOperation(string $operation): void
+    {
+        $probes = 0;
+        // the availability probe (first GET /secrets/keys) succeeds, the operation itself gets the 500
+        $store = $this->storeFor(static function (string $method, string $url) use (&$probes): MockResponse {
+            if (str_contains($url, '/secrets/keys') && 0 === $probes++) {
+                return new MockResponse('{"keys":[]}', ['http_code' => 200]);
+            }
+
+            return new MockResponse('{"error":"storage_failed"}', ['http_code' => 500]);
+        });
+
+        $this->expectException(SecretStorageFailedException::class);
+
+        $this->callOperation($store, $operation);
     }
 
     private function callOperation(SecretStore $store, string $operation): void
