@@ -1,8 +1,26 @@
 {
     "name": "arnauddelgerie/tfs-app-bundle",
-    "description": "Symfony bundle that turns a Symfony app into a local-first desktop app (Tauri + FrankenPHP) — companion bundle to TFSAppWorkstation.",
+    "description": "Symfony bundle for apps run by TFSAppHub, a host that installs and runs Symfony apps as local desktop apps.",
     "type": "symfony-bundle",
+    "keywords": [
+        "symfony",
+        "symfony-bundle",
+        "desktop-app",
+        "local-first",
+        "tfsapp",
+        "tfsapphub"
+    ],
+    "homepage": "https://github.com/ArnaudDelgerie/TFSAppBundle",
     "license": "MIT",
+    "authors": [
+        {
+            "name": "Arnaud Delgerie"
+        }
+    ],
+    "support": {
+        "issues": "https://github.com/ArnaudDelgerie/TFSAppBundle/issues",
+        "source": "https://github.com/ArnaudDelgerie/TFSAppBundle"
+    },
     "require": {
         "php": ">=8.2",
         "symfony/http-kernel": "^7.4|^8.0",
@@ -20,7 +38,7 @@
     },
     "suggest": {
         "doctrine/dbal": "To register the SQLite WAL/busy_timeout pragma middleware (sqlite_pragmas)",
-        "symfony/twig-bundle": "To expose the tfsapp Twig global (station identity/capability flags for templates)"
+        "symfony/twig-bundle": "To expose the tfsapp Twig global (hub context/capability flags for templates)"
     },
     "autoload": {
         "psr-4": {
