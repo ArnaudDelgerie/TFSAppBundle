@@ -145,4 +145,4 @@ composer install
 vendor/bin/phpunit
 ```
 
-To test a bundle change under the hub, run the app through the hub's `dev` mode ([§9](https://github.com/ArnaudDelgerie/TFSAppHub/blob/main/contract/9-running-a-project-in-dev.md)) with [TFSAppTest](https://github.com/ArnaudDelgerie/TFSAppTest) — its README holds the procedure for working against a local hub checkout and a local bundle checkout.
+To test a bundle change under the hub, run the app through the hub's `dev` mode ([§9](https://github.com/ArnaudDelgerie/TFSAppHub/blob/main/contract/9-running-a-project-in-dev.md)) with [TFSAppTest](https://github.com/ArnaudDelgerie/TFSAppTest) — its README holds the procedure for working against a local bundle checkout.
