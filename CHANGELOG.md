@@ -2,6 +2,16 @@
 
 ## 0.2.0
 
+The README is now the app developer's getting started: install the hub, build
+the minimal app, the ten pitfalls a fresh `symfony/skeleton` meets — the first
+three caught by `tfsapp:doctor` — and publish and install it. `docs/` holds
+one page per topic: five for building the app, four for the lifecycle, seven
+for the native capabilities, and two for developing and publishing. Each page
+shows what the feature lets the app do, its front and back (the IPC call and
+the bundle service or bridge route), the parameters and the errors, and links
+the hub's contract for depth. `docs/` is `export-ignore`d — a `composer require`
+does not ship it.
+
 `TFSAppKernel` is removed. Symfony's own `MicroKernelTrait` already honours
 `APP_CACHE_DIR`, `APP_BUILD_DIR` and `APP_LOG_DIR` on every version this
 bundle supports, so the class duplicated it — and an app that also composed
