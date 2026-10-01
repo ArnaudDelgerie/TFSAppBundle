@@ -524,6 +524,80 @@ TWIG,
         self::assertDoesNotMatchRegularExpression('/does\s+not\s+come\s+from\s+APP_SESSION_DIR/', $tester->getDisplay());
     }
 
+    public function testAssetMapperNotInstalledStaysSilent(): void
+    {
+        $this->writeComposerLock('doctrine/orm');
+
+        $tester = $this->createTester();
+        $tester->execute([]);
+
+        self::assertSame(0, $tester->getStatusCode());
+        $display = $tester->getDisplay();
+
+        self::assertDoesNotMatchRegularExpression('/not\s+compiled/', $display);
+        self::assertStringNotContainsString('build_outputs', $display);
+    }
+
+    public function testAssetMapperWithoutComposerLockStaysSilent(): void
+    {
+        $tester = $this->createTester();
+        $tester->execute([]);
+
+        self::assertSame(0, $tester->getStatusCode());
+
+        self::assertDoesNotMatchRegularExpression('/not\s+compiled/', $tester->getDisplay());
+    }
+
+    public function testInstalledAssetMapperWithoutCompiledOutputIsFlaggedWithAWarning(): void
+    {
+        $this->writeComposerLock('symfony/asset-mapper');
+
+        $tester = $this->createTester();
+        $tester->execute([]);
+
+        self::assertSame(0, $tester->getStatusCode());
+        $display = $tester->getDisplay();
+
+        self::assertMatchesRegularExpression('/not\s+compiled/', $display);
+        self::assertStringContainsString('asset-map:compile', $display);
+    }
+
+    public function testCompiledAssetMapperMissingFromBuildOutputsIsFlaggedWithAWarning(): void
+    {
+        $this->writeComposerLock('symfony/asset-mapper');
+        $this->compileAssets();
+
+        $tester = $this->createTester();
+        $tester->execute([]);
+
+        self::assertSame(0, $tester->getStatusCode());
+        $display = $tester->getDisplay();
+
+        self::assertDoesNotMatchRegularExpression('/not\s+compiled/', $display);
+        self::assertMatchesRegularExpression('/is\s+not\s+declared/', $display);
+        self::assertStringContainsString('build_outputs', $display);
+        self::assertStringContainsString('"public/assets"', $display);
+    }
+
+    public function testCompiledAssetMapperDeclaredInBuildOutputsStaysSilent(): void
+    {
+        $this->writeComposerLock('symfony/asset-mapper');
+        $this->compileAssets();
+        file_put_contents(
+            $this->projectRoot . '/tfsapp.config.json',
+            "{\"build_outputs\": [\"public/assets\"]}\n",
+        );
+
+        $tester = $this->createTester();
+        $tester->execute([]);
+
+        self::assertSame(0, $tester->getStatusCode());
+        $display = $tester->getDisplay();
+
+        self::assertDoesNotMatchRegularExpression('/not\s+compiled/', $display);
+        self::assertDoesNotMatchRegularExpression('/is\s+not\s+declared/', $display);
+    }
+
     /**
      * @param list<string>|null $receiverTransports
      */
@@ -544,6 +618,23 @@ TWIG,
         $application->setAutoExit(false);
 
         return new CommandTester($application->find('tfsapp:doctor'));
+    }
+
+    private function writeComposerLock(string ...$packageNames): void
+    {
+        file_put_contents(
+            $this->projectRoot . '/composer.lock',
+            json_encode([
+                'packages' => array_map(static fn (string $name): array => ['name' => $name], $packageNames),
+                'packages-dev' => [],
+            ]),
+        );
+    }
+
+    private function compileAssets(): void
+    {
+        mkdir($this->projectRoot . '/public/assets', 0777, true);
+        file_put_contents($this->projectRoot . '/public/assets/manifest.json', "{}\n");
     }
 
     private static function removeDir(string $dir): void

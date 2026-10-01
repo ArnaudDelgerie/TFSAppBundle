@@ -72,6 +72,7 @@ final class DoctorCommand extends Command
         $this->warnMissingWorkerTransports($io);
         $this->warnOffOriginAssets($io);
         $this->warnOffHubSessionDir($io);
+        $this->warnUndeclaredOrUncompiledAssets($io);
 
         return Command::SUCCESS;
     }
@@ -410,6 +411,96 @@ final class DoctorCommand extends Command
     private static function stripHotReloadGate(string $contents): string
     {
         return preg_replace('/\{%\s*if\s+frankenphp_hot_reload\s*%\}.*?\{%\s*endif\s*%\}/si', '', $contents) ?? $contents;
+    }
+
+    /**
+     * Only AssetMapper, the `webapp` recipe's default, is checked — the
+     * doctor stays silent for apps without a build step of their own.
+     */
+    private function warnUndeclaredOrUncompiledAssets(SymfonyStyle $io): void
+    {
+        $projectDir = rtrim($this->kernel->getProjectDir(), '/');
+
+        if (!self::isPackageInstalled($projectDir, 'symfony/asset-mapper')) {
+            return;
+        }
+
+        if (!is_file($projectDir . '/public/assets/manifest.json')) {
+            $io->warning(
+                'The AssetMapper output under public/assets/ is not compiled — in prod, /assets/… answers 404'
+                . ' until asset-map:compile has run, and tfsapp-hub dev runs with APP_DEBUG=1 and serves them on'
+                . ' the fly, so everything works in dev and breaks once installed. Run'
+                . ' APP_ENV=prod bin/console asset-map:compile.',
+            );
+        }
+
+        if (!self::buildOutputsDeclarePublicAssets($projectDir)) {
+            $io->warning(
+                'public/assets/ is not declared in tfsapp.config.json\'s build_outputs — the directory is'
+                . ' gitignored, so the compiled assets only ship once declared. Add "public/assets" to'
+                . ' build_outputs.',
+            );
+        }
+    }
+
+    private static function buildOutputsDeclarePublicAssets(string $projectDir): bool
+    {
+        $configPath = $projectDir . '/tfsapp.config.json';
+
+        if (!is_file($configPath)) {
+            return false;
+        }
+
+        $contents = file_get_contents($configPath);
+
+        if (false === $contents) {
+            return false;
+        }
+
+        try {
+            $config = json_decode($contents, true, flags: \JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            return false;
+        }
+
+        $buildOutputs = \is_array($config) ? ($config['build_outputs'] ?? null) : null;
+
+        return \is_array($buildOutputs) && \in_array('public/assets', $buildOutputs, true);
+    }
+
+    private static function isPackageInstalled(string $projectDir, string $packageName): bool
+    {
+        $lockPath = $projectDir . '/composer.lock';
+
+        if (!is_file($lockPath)) {
+            return false;
+        }
+
+        $contents = file_get_contents($lockPath);
+
+        if (false === $contents) {
+            return false;
+        }
+
+        try {
+            $lock = json_decode($contents, true, flags: \JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            return false;
+        }
+
+        if (!\is_array($lock)) {
+            return false;
+        }
+
+        foreach (['packages', 'packages-dev'] as $section) {
+            foreach ($lock[$section] ?? [] as $package) {
+                if (\is_array($package) && ($package['name'] ?? null) === $packageName) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     private static function formatBool(bool $value): string
