@@ -5,6 +5,7 @@ namespace ArnaudDelgerie\TFSAppBundle;
 use ArnaudDelgerie\TFSAppBundle\DependencyInjection\Compiler\RegisterSqlitePragmaMiddlewarePass;
 use ArnaudDelgerie\TFSAppBundle\DependencyInjection\Compiler\RegisterTfsAppTwigGlobalPass;
 use Symfony\Component\Config\Definition\Configurator\DefinitionConfigurator;
+use Symfony\Component\DependencyInjection\Compiler\PassConfig;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 use Symfony\Component\HttpKernel\Bundle\AbstractBundle;
@@ -25,7 +26,11 @@ final class TFSAppBundle extends AbstractBundle
         parent::build($container);
 
         $container->addCompilerPass(new RegisterTfsAppTwigGlobalPass());
-        $container->addCompilerPass(new RegisterSqlitePragmaMiddlewarePass());
+        $container->addCompilerPass(
+            new RegisterSqlitePragmaMiddlewarePass(),
+            PassConfig::TYPE_BEFORE_OPTIMIZATION,
+            1,
+        );
     }
 
     public function loadExtension(array $config, ContainerConfigurator $container, ContainerBuilder $builder): void

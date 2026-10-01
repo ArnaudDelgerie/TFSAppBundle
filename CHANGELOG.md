@@ -37,6 +37,18 @@ land in `/tmp`), and AssetMapper output that is uncompiled or missing from
 `tfsapp.config.json`'s `build_outputs` (`public/assets/` is gitignored, so it
 only ships once declared).
 
+SQLite connections now really do get WAL under DoctrineBundle — they never
+had. DoctrineBundle wires `doctrine.middleware`-tagged services sorted by
+priority, so ours came last and `SqlitePragmaMiddleware::wrap()` received
+another middleware's wrapper, not an `AbstractSQLiteDriver`, and returned it
+unwrapped; and the compiler pass registering ours ran after `MiddlewaresPass`
+had collected the tagged services, so on a fresh app it never reached the
+connection at all. `wrap()` now wraps every driver and `SqlitePragmaDriver`
+issues the pragmas only when the connection parameters name a SQLite driver
+(`pdo_sqlite`, `sqlite3`, or an `AbstractSQLiteDriver` `driverClass`), and the
+pass runs before `MiddlewaresPass` — after one Doctrine query,
+`tfsapp:doctor` reports `sqlite_journal_mode: wal`.
+
 ## 0.1.0
 
 First release: what an app needs to run under TFSAppHub. Extend `TFSAppKernel`

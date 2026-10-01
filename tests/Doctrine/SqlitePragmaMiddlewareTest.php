@@ -19,10 +19,15 @@ final class SqlitePragmaMiddlewareTest extends TestCase
         self::assertInstanceOf(SqlitePragmaDriver::class, $wrapped);
     }
 
-    public function testLeavesNonSqliteDriversUntouched(): void
+    /**
+     * The wrap order of the middleware list is not ours to choose, so the middleware cannot tell a
+     * non-SQLite driver from another middleware's wrapper around a SQLite one: it wraps everything
+     * and leaves the platform decision to SqlitePragmaDriver, which sees the connection parameters.
+     */
+    public function testWrapsNonSqliteDriversToo(): void
     {
-        $driver = new PgSQLDriver();
+        $wrapped = (new SqlitePragmaMiddleware())->wrap(new PgSQLDriver());
 
-        self::assertSame($driver, (new SqlitePragmaMiddleware())->wrap($driver));
+        self::assertInstanceOf(SqlitePragmaDriver::class, $wrapped);
     }
 }
