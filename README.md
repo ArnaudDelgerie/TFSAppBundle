@@ -64,7 +64,7 @@ Why the database is SQLite at all is the contract's constraint on the app: [§3]
 
 It also catches the three pitfalls every fresh `symfony/skeleton` + `webapp` project meets, each naming its one-line fix:
 
-- **`DATABASE_URL` is not SQLite.** The `webapp` recipe names a PostgreSQL server, and migrations are generated against that server — they fail at install time, where the database is SQLite. Set `DATABASE_URL="sqlite:///%kernel.project_dir%/var/data/app.db"` in `.env`, the same line `tfsapp-hub dev` injects.
+- **`DATABASE_URL` is not SQLite.** The `webapp` recipe names a PostgreSQL server, and migrations are generated against that server — they fail at install time, where the database is SQLite. Set `DATABASE_URL="sqlite:///%kernel.project_dir%/var/data/app.db"` in `.env`, the same file `tfsapp-hub dev` uses.
 - **Sessions do not use `APP_SESSION_DIR`.** `framework.session: true` leaves the save path to PHP, and the bundled PHP's `session.save_path` is empty, so sessions land in `/tmp` — shared by every app on the machine and lost at reboot. Set `save_path: '%env(default::APP_SESSION_DIR)%'` under `framework.session`; the `default::` keeps the app booting outside the hub. No warning when the app has no session at all.
 - **AssetMapper output is uncompiled or undeclared.** `public/assets/` is gitignored, so it only ships when `tfsapp.config.json`'s `build_outputs` declares `"public/assets"`, and `/assets/…` answers 404 in prod until `APP_ENV=prod bin/console asset-map:compile` has run — `tfsapp-hub dev` runs with `APP_DEBUG=1` and serves them on the fly, so everything works in dev and breaks once installed. The check only runs when `symfony/asset-mapper` is installed.
 

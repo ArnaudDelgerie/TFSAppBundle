@@ -201,8 +201,8 @@ final class DoctorCommand extends Command
             return [$rows, sprintf(
                 'DATABASE_URL is not SQLite — it resolves to %s. Migrations are generated against that server,'
                 . ' and the database the installed app runs on is SQLite (CONTRACT.md §3), so they fail at install'
-                . ' time. Set DATABASE_URL="sqlite:///%%kernel.project_dir%%/var/data/app.db" in .env — the same line'
-                . ' tfsapp-hub dev injects.',
+                . ' time. Set DATABASE_URL="sqlite:///%%kernel.project_dir%%/var/data/app.db" in .env — the same file'
+                . ' tfsapp-hub dev uses.',
                 explode(':', $resolvedUrl, 2)[0],
             )];
         }
