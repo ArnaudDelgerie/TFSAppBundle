@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.0
+
+`TFSAppKernel` is removed. Symfony's own `MicroKernelTrait` already honours
+`APP_CACHE_DIR`, `APP_BUILD_DIR` and `APP_LOG_DIR` on every version this
+bundle supports, so the class duplicated it — and an app that also composed
+`MicroKernelTrait`, as the skeleton's kernel does, shadowed it anyway. Extend
+Symfony's `Kernel` with `MicroKernelTrait`, as `symfony/skeleton` generates
+it; nothing else changes.
+
 ## 0.1.0
 
 First release: what an app needs to run under TFSAppHub. Extend `TFSAppKernel`
