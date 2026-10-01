@@ -20,6 +20,15 @@ use Symfony\Contracts\Service\ServiceCollectionInterface;
 #[AsCommand(name: 'tfsapp:doctor', description: 'Print the resolved hub context and bridge availability')]
 final class DoctorCommand extends Command
 {
+    /**
+     * A save_path configured from APP_SESSION_DIR resolves to whatever the
+     * env holds when the container first reads it, so the check plants a
+     * sentinel there beforehand: a configuration that reads the env comes
+     * back as the sentinel, anything else (a plain path, or nothing at all)
+     * does not.
+     */
+    private const SESSION_DIR_SENTINEL = 'tfsapp-doctor-session-dir-sentinel';
+
     public function __construct(
         private readonly HubContextInterface $context,
         private readonly SecretStoreInterface $secretStore,
@@ -62,8 +71,52 @@ final class DoctorCommand extends Command
 
         $this->warnMissingWorkerTransports($io);
         $this->warnOffOriginAssets($io);
+        $this->warnOffHubSessionDir($io);
 
         return Command::SUCCESS;
+    }
+
+    /**
+     * The compiled configuration only defines the session.save_path
+     * parameter when sessions are enabled; its resolved value is what the
+     * session handler will use.
+     */
+    private function warnOffHubSessionDir(SymfonyStyle $io): void
+    {
+        $container = $this->kernel->getContainer();
+
+        if (!$container->hasParameter('session.save_path')) {
+            return;
+        }
+
+        $sessionDir = self::readEnv('APP_SESSION_DIR');
+        $injected = null !== $sessionDir;
+
+        if (!$injected) {
+            $sessionDir = self::SESSION_DIR_SENTINEL;
+            $_ENV['APP_SESSION_DIR'] = $sessionDir;
+            $_SERVER['APP_SESSION_DIR'] = $sessionDir;
+        }
+
+        try {
+            $savePath = $container->getParameter('session.save_path');
+        } finally {
+            if (!$injected) {
+                unset($_ENV['APP_SESSION_DIR'], $_SERVER['APP_SESSION_DIR']);
+            }
+        }
+
+        if ($savePath === $sessionDir) {
+            return;
+        }
+
+        $io->warning(
+            'Sessions are enabled but their save path does not come from APP_SESSION_DIR — with the native'
+            . ' handler the bundled PHP\'s session.save_path is empty, so sessions land in /tmp: shared by'
+            . ' every app on the machine and lost at reboot. Set save_path: \'%env(default::APP_SESSION_DIR)%\''
+            . ' under framework.session in config/packages/framework.yaml; the default:: keeps the app booting'
+            . ' outside the hub.',
+        );
     }
 
     private function warnMissingWorkerTransports(SymfonyStyle $io): void

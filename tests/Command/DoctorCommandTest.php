@@ -36,6 +36,8 @@ final class DoctorCommandTest extends TestCase
         putenv('DATABASE_URL');
         unset($_SERVER['DATABASE_URL'], $_ENV['DATABASE_URL']);
         putenv('APP_UPLOAD_DIR');
+        putenv('APP_SESSION_DIR');
+        unset($_SERVER['APP_SESSION_DIR'], $_ENV['APP_SESSION_DIR']);
 
         if (is_dir($this->baseDir . '/uploads')) {
             chmod($this->baseDir . '/uploads', 0777);
@@ -456,15 +458,85 @@ TWIG,
         self::assertStringNotContainsString('remove it before packaging', $display);
     }
 
+    public function testSessionEnabledWithoutSavePathIsFlaggedWithAWarning(): void
+    {
+        // What `framework.session: true` normalizes to: enabled, no save_path,
+        // so the native handler falls back to PHP's session.save_path.
+        $tester = $this->createTester(sessionConfig: ['enabled' => true]);
+        $tester->execute([]);
+
+        self::assertSame(0, $tester->getStatusCode());
+        $display = $tester->getDisplay();
+
+        self::assertMatchesRegularExpression('/save\s+path\s+does\s+not\s+come\s+from\s+APP_SESSION_DIR/', $display);
+        self::assertMatchesRegularExpression('/save_path:/', $display);
+        self::assertStringContainsString("'%env(default::APP_SESSION_DIR)%'", $display);
+    }
+
+    public function testSessionSavePathReadingAppSessionDirDoesNotWarn(): void
+    {
+        $tester = $this->createTester(sessionConfig: [
+            'enabled' => true,
+            'save_path' => '%env(default::APP_SESSION_DIR)%',
+        ]);
+        $tester->execute([]);
+
+        self::assertSame(0, $tester->getStatusCode());
+
+        self::assertDoesNotMatchRegularExpression('/does\s+not\s+come\s+from\s+APP_SESSION_DIR/', $tester->getDisplay());
+    }
+
+    public function testSessionSavePathReadingAppSessionDirDoesNotWarnUnderTheHub(): void
+    {
+        putenv('APP_SESSION_DIR=' . $this->baseDir . '/sessions');
+
+        $tester = $this->createTester(sessionConfig: [
+            'enabled' => true,
+            'save_path' => '%env(default::APP_SESSION_DIR)%',
+        ]);
+        $tester->execute([]);
+
+        self::assertSame(0, $tester->getStatusCode());
+
+        self::assertDoesNotMatchRegularExpression('/does\s+not\s+come\s+from\s+APP_SESSION_DIR/', $tester->getDisplay());
+    }
+
+    public function testSessionSavePathIgnoringAppSessionDirIsFlaggedWithAWarning(): void
+    {
+        $tester = $this->createTester(sessionConfig: [
+            'enabled' => true,
+            'save_path' => '/var/lib/my-app-sessions',
+        ]);
+        $tester->execute([]);
+
+        self::assertSame(0, $tester->getStatusCode());
+
+        self::assertMatchesRegularExpression('/does\s+not\s+come\s+from\s+APP_SESSION_DIR/', $tester->getDisplay());
+    }
+
+    public function testSessionDisabledDoesNotWarn(): void
+    {
+        $tester = $this->createTester();
+        $tester->execute([]);
+
+        self::assertSame(0, $tester->getStatusCode());
+
+        self::assertDoesNotMatchRegularExpression('/does\s+not\s+come\s+from\s+APP_SESSION_DIR/', $tester->getDisplay());
+    }
+
     /**
      * @param list<string>|null $receiverTransports
      */
-    private function createTester(?array $receiverTransports = null, ?bool $updateCheckerAvailable = null): CommandTester
-    {
+    private function createTester(
+        ?array $receiverTransports = null,
+        ?bool $updateCheckerAvailable = null,
+        ?array $sessionConfig = null,
+    ): CommandTester {
         $this->kernel = new DoctorCommandTestKernel(
             $this->projectRoot,
             receiverTransports: $receiverTransports,
             updateCheckerAvailable: $updateCheckerAvailable,
+            sessionConfig: $sessionConfig,
         );
         $this->kernel->boot();
 
