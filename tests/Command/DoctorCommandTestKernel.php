@@ -20,6 +20,7 @@ final class DoctorCommandTestKernel extends Kernel
         private readonly ?bool $sqlitePragmas = null,
         private readonly ?array $receiverTransports = null,
         private readonly ?bool $updateCheckerAvailable = null,
+        private readonly ?array $sessionConfig = null,
     ) {
         parent::__construct('test', false);
     }
@@ -33,10 +34,16 @@ final class DoctorCommandTestKernel extends Kernel
     public function registerContainerConfiguration(LoaderInterface $loader): void
     {
         $loader->load(function (ContainerBuilder $container): void {
-            $container->loadFromExtension('framework', [
+            $framework = [
                 'test' => true,
                 'secret' => 'test',
-            ]);
+            ];
+
+            if (null !== $this->sessionConfig) {
+                $framework['session'] = $this->sessionConfig;
+            }
+
+            $container->loadFromExtension('framework', $framework);
 
             if (null !== $this->sqlitePragmas) {
                 $container->loadFromExtension('tfs_app', [

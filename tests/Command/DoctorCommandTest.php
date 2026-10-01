@@ -36,6 +36,8 @@ final class DoctorCommandTest extends TestCase
         putenv('DATABASE_URL');
         unset($_SERVER['DATABASE_URL'], $_ENV['DATABASE_URL']);
         putenv('APP_UPLOAD_DIR');
+        putenv('APP_SESSION_DIR');
+        unset($_SERVER['APP_SESSION_DIR'], $_ENV['APP_SESSION_DIR']);
 
         if (is_dir($this->baseDir . '/uploads')) {
             chmod($this->baseDir . '/uploads', 0777);
@@ -140,6 +142,7 @@ final class DoctorCommandTest extends TestCase
         self::assertSame(0, $tester->getStatusCode());
         self::assertStringContainsString('database_url', $tester->getDisplay());
         self::assertStringContainsString('(not set)', $tester->getDisplay());
+        self::assertDoesNotMatchRegularExpression('/not\s+SQLite/', $tester->getDisplay());
     }
 
     public function testNonSqliteDatabaseUrlIsPrintedResolvedWithoutFileChecks(): void
@@ -154,6 +157,33 @@ final class DoctorCommandTest extends TestCase
 
         self::assertStringContainsString('postgresql://app:secret@127.0.0.1:5432/app', $display);
         self::assertStringNotContainsString('database_file_exists', $display);
+    }
+
+    public function testNonSqliteDatabaseUrlIsFlaggedWithAWarningNamingTheSqliteFix(): void
+    {
+        putenv('DATABASE_URL=mysql://app:secret@127.0.0.1:3306/app');
+
+        $tester = $this->createTester();
+        $tester->execute([]);
+
+        self::assertSame(0, $tester->getStatusCode());
+        $display = $tester->getDisplay();
+
+        self::assertMatchesRegularExpression('/not\s+SQLite/', $display);
+        self::assertMatchesRegularExpression('/resolves\s+to\s+mysql/', $display);
+        self::assertStringContainsString('DATABASE_URL="sqlite:///%kernel.project_dir%/var/data/app.db"', $display);
+        self::assertMatchesRegularExpression('/Migrations\s+are\s+generated\s+against\s+that\s+server/', $display);
+    }
+
+    public function testSqliteDatabaseUrlDoesNotWarnThatItIsNotSqlite(): void
+    {
+        putenv('DATABASE_URL=sqlite:///%kernel.project_dir%/var/data.db');
+
+        $tester = $this->createTester();
+        $tester->execute([]);
+
+        self::assertSame(0, $tester->getStatusCode());
+        self::assertDoesNotMatchRegularExpression('/not\s+SQLite/', $tester->getDisplay());
     }
 
     public function testSqliteDatabaseUrlResolvesKernelProjectDirPlaceholder(): void
@@ -428,15 +458,159 @@ TWIG,
         self::assertStringNotContainsString('remove it before packaging', $display);
     }
 
+    public function testSessionEnabledWithoutSavePathIsFlaggedWithAWarning(): void
+    {
+        // What `framework.session: true` normalizes to: enabled, no save_path,
+        // so the native handler falls back to PHP's session.save_path.
+        $tester = $this->createTester(sessionConfig: ['enabled' => true]);
+        $tester->execute([]);
+
+        self::assertSame(0, $tester->getStatusCode());
+        $display = $tester->getDisplay();
+
+        self::assertMatchesRegularExpression('/save\s+path\s+does\s+not\s+come\s+from\s+APP_SESSION_DIR/', $display);
+        self::assertMatchesRegularExpression('/save_path:/', $display);
+        self::assertStringContainsString("'%env(default::APP_SESSION_DIR)%'", $display);
+    }
+
+    public function testSessionSavePathReadingAppSessionDirDoesNotWarn(): void
+    {
+        $tester = $this->createTester(sessionConfig: [
+            'enabled' => true,
+            'save_path' => '%env(default::APP_SESSION_DIR)%',
+        ]);
+        $tester->execute([]);
+
+        self::assertSame(0, $tester->getStatusCode());
+
+        self::assertDoesNotMatchRegularExpression('/does\s+not\s+come\s+from\s+APP_SESSION_DIR/', $tester->getDisplay());
+    }
+
+    public function testSessionSavePathReadingAppSessionDirDoesNotWarnUnderTheHub(): void
+    {
+        putenv('APP_SESSION_DIR=' . $this->baseDir . '/sessions');
+
+        $tester = $this->createTester(sessionConfig: [
+            'enabled' => true,
+            'save_path' => '%env(default::APP_SESSION_DIR)%',
+        ]);
+        $tester->execute([]);
+
+        self::assertSame(0, $tester->getStatusCode());
+
+        self::assertDoesNotMatchRegularExpression('/does\s+not\s+come\s+from\s+APP_SESSION_DIR/', $tester->getDisplay());
+    }
+
+    public function testSessionSavePathIgnoringAppSessionDirIsFlaggedWithAWarning(): void
+    {
+        $tester = $this->createTester(sessionConfig: [
+            'enabled' => true,
+            'save_path' => '/var/lib/my-app-sessions',
+        ]);
+        $tester->execute([]);
+
+        self::assertSame(0, $tester->getStatusCode());
+
+        self::assertMatchesRegularExpression('/does\s+not\s+come\s+from\s+APP_SESSION_DIR/', $tester->getDisplay());
+    }
+
+    public function testSessionDisabledDoesNotWarn(): void
+    {
+        $tester = $this->createTester();
+        $tester->execute([]);
+
+        self::assertSame(0, $tester->getStatusCode());
+
+        self::assertDoesNotMatchRegularExpression('/does\s+not\s+come\s+from\s+APP_SESSION_DIR/', $tester->getDisplay());
+    }
+
+    public function testAssetMapperNotInstalledStaysSilent(): void
+    {
+        $this->writeComposerLock('doctrine/orm');
+
+        $tester = $this->createTester();
+        $tester->execute([]);
+
+        self::assertSame(0, $tester->getStatusCode());
+        $display = $tester->getDisplay();
+
+        self::assertDoesNotMatchRegularExpression('/not\s+compiled/', $display);
+        self::assertStringNotContainsString('build_outputs', $display);
+    }
+
+    public function testAssetMapperWithoutComposerLockStaysSilent(): void
+    {
+        $tester = $this->createTester();
+        $tester->execute([]);
+
+        self::assertSame(0, $tester->getStatusCode());
+
+        self::assertDoesNotMatchRegularExpression('/not\s+compiled/', $tester->getDisplay());
+    }
+
+    public function testInstalledAssetMapperWithoutCompiledOutputIsFlaggedWithAWarning(): void
+    {
+        $this->writeComposerLock('symfony/asset-mapper');
+
+        $tester = $this->createTester();
+        $tester->execute([]);
+
+        self::assertSame(0, $tester->getStatusCode());
+        $display = $tester->getDisplay();
+
+        self::assertMatchesRegularExpression('/not\s+compiled/', $display);
+        self::assertStringContainsString('asset-map:compile', $display);
+    }
+
+    public function testCompiledAssetMapperMissingFromBuildOutputsIsFlaggedWithAWarning(): void
+    {
+        $this->writeComposerLock('symfony/asset-mapper');
+        $this->compileAssets();
+
+        $tester = $this->createTester();
+        $tester->execute([]);
+
+        self::assertSame(0, $tester->getStatusCode());
+        $display = $tester->getDisplay();
+
+        self::assertDoesNotMatchRegularExpression('/not\s+compiled/', $display);
+        self::assertMatchesRegularExpression('/is\s+not\s+declared/', $display);
+        self::assertStringContainsString('build_outputs', $display);
+        self::assertStringContainsString('"public/assets"', $display);
+    }
+
+    public function testCompiledAssetMapperDeclaredInBuildOutputsStaysSilent(): void
+    {
+        $this->writeComposerLock('symfony/asset-mapper');
+        $this->compileAssets();
+        file_put_contents(
+            $this->projectRoot . '/tfsapp.config.json',
+            "{\"build_outputs\": [\"public/assets\"]}\n",
+        );
+
+        $tester = $this->createTester();
+        $tester->execute([]);
+
+        self::assertSame(0, $tester->getStatusCode());
+        $display = $tester->getDisplay();
+
+        self::assertDoesNotMatchRegularExpression('/not\s+compiled/', $display);
+        self::assertDoesNotMatchRegularExpression('/is\s+not\s+declared/', $display);
+    }
+
     /**
      * @param list<string>|null $receiverTransports
      */
-    private function createTester(?array $receiverTransports = null, ?bool $updateCheckerAvailable = null): CommandTester
-    {
+    private function createTester(
+        ?array $receiverTransports = null,
+        ?bool $updateCheckerAvailable = null,
+        ?array $sessionConfig = null,
+    ): CommandTester {
         $this->kernel = new DoctorCommandTestKernel(
             $this->projectRoot,
             receiverTransports: $receiverTransports,
             updateCheckerAvailable: $updateCheckerAvailable,
+            sessionConfig: $sessionConfig,
         );
         $this->kernel->boot();
 
@@ -444,6 +618,23 @@ TWIG,
         $application->setAutoExit(false);
 
         return new CommandTester($application->find('tfsapp:doctor'));
+    }
+
+    private function writeComposerLock(string ...$packageNames): void
+    {
+        file_put_contents(
+            $this->projectRoot . '/composer.lock',
+            json_encode([
+                'packages' => array_map(static fn (string $name): array => ['name' => $name], $packageNames),
+                'packages-dev' => [],
+            ]),
+        );
+    }
+
+    private function compileAssets(): void
+    {
+        mkdir($this->projectRoot . '/public/assets', 0777, true);
+        file_put_contents($this->projectRoot . '/public/assets/manifest.json', "{}\n");
     }
 
     private static function removeDir(string $dir): void

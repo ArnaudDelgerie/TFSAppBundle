@@ -20,6 +20,15 @@ use Symfony\Contracts\Service\ServiceCollectionInterface;
 #[AsCommand(name: 'tfsapp:doctor', description: 'Print the resolved hub context and bridge availability')]
 final class DoctorCommand extends Command
 {
+    /**
+     * A save_path configured from APP_SESSION_DIR resolves to whatever the
+     * env holds when the container first reads it, so the check plants a
+     * sentinel there beforehand: a configuration that reads the env comes
+     * back as the sentinel, anything else (a plain path, or nothing at all)
+     * does not.
+     */
+    private const SESSION_DIR_SENTINEL = 'tfsapp-doctor-session-dir-sentinel';
+
     public function __construct(
         private readonly HubContextInterface $context,
         private readonly SecretStoreInterface $secretStore,
@@ -62,8 +71,53 @@ final class DoctorCommand extends Command
 
         $this->warnMissingWorkerTransports($io);
         $this->warnOffOriginAssets($io);
+        $this->warnOffHubSessionDir($io);
+        $this->warnUndeclaredOrUncompiledAssets($io);
 
         return Command::SUCCESS;
+    }
+
+    /**
+     * The compiled configuration only defines the session.save_path
+     * parameter when sessions are enabled; its resolved value is what the
+     * session handler will use.
+     */
+    private function warnOffHubSessionDir(SymfonyStyle $io): void
+    {
+        $container = $this->kernel->getContainer();
+
+        if (!$container->hasParameter('session.save_path')) {
+            return;
+        }
+
+        $sessionDir = self::readEnv('APP_SESSION_DIR');
+        $injected = null !== $sessionDir;
+
+        if (!$injected) {
+            $sessionDir = self::SESSION_DIR_SENTINEL;
+            $_ENV['APP_SESSION_DIR'] = $sessionDir;
+            $_SERVER['APP_SESSION_DIR'] = $sessionDir;
+        }
+
+        try {
+            $savePath = $container->getParameter('session.save_path');
+        } finally {
+            if (!$injected) {
+                unset($_ENV['APP_SESSION_DIR'], $_SERVER['APP_SESSION_DIR']);
+            }
+        }
+
+        if ($savePath === $sessionDir) {
+            return;
+        }
+
+        $io->warning(
+            'Sessions are enabled but their save path does not come from APP_SESSION_DIR — with the native'
+            . ' handler the bundled PHP\'s session.save_path is empty, so sessions land in /tmp: shared by'
+            . ' every app on the machine and lost at reboot. Set save_path: \'%env(default::APP_SESSION_DIR)%\''
+            . ' under framework.session in config/packages/framework.yaml; the default:: keeps the app booting'
+            . ' outside the hub.',
+        );
     }
 
     private function warnMissingWorkerTransports(SymfonyStyle $io): void
@@ -144,7 +198,13 @@ final class DoctorCommand extends Command
         $rows = [['database_url', $resolvedUrl]];
 
         if (!str_starts_with($resolvedUrl, 'sqlite:')) {
-            return [$rows, null];
+            return [$rows, sprintf(
+                'DATABASE_URL is not SQLite — it resolves to %s. Migrations are generated against that server,'
+                . ' and the database the installed app runs on is SQLite (CONTRACT.md §3), so they fail at install'
+                . ' time. Set DATABASE_URL="sqlite:///%%kernel.project_dir%%/var/data/app.db" in .env — the same file'
+                . ' tfsapp-hub dev uses.',
+                explode(':', $resolvedUrl, 2)[0],
+            )];
         }
 
         if (':memory:' === substr($resolvedUrl, \strlen('sqlite:'))) {
@@ -351,6 +411,96 @@ final class DoctorCommand extends Command
     private static function stripHotReloadGate(string $contents): string
     {
         return preg_replace('/\{%\s*if\s+frankenphp_hot_reload\s*%\}.*?\{%\s*endif\s*%\}/si', '', $contents) ?? $contents;
+    }
+
+    /**
+     * Only AssetMapper, the `webapp` recipe's default, is checked — the
+     * doctor stays silent for apps without a build step of their own.
+     */
+    private function warnUndeclaredOrUncompiledAssets(SymfonyStyle $io): void
+    {
+        $projectDir = rtrim($this->kernel->getProjectDir(), '/');
+
+        if (!self::isPackageInstalled($projectDir, 'symfony/asset-mapper')) {
+            return;
+        }
+
+        if (!is_file($projectDir . '/public/assets/manifest.json')) {
+            $io->warning(
+                'The AssetMapper output under public/assets/ is not compiled — in prod, /assets/… answers 404'
+                . ' until asset-map:compile has run, and tfsapp-hub dev runs with APP_DEBUG=1 and serves them on'
+                . ' the fly, so everything works in dev and breaks once installed. Run'
+                . ' APP_ENV=prod bin/console asset-map:compile.',
+            );
+        }
+
+        if (!self::buildOutputsDeclarePublicAssets($projectDir)) {
+            $io->warning(
+                'public/assets/ is not declared in tfsapp.config.json\'s build_outputs — the directory is'
+                . ' gitignored, so the compiled assets only ship once declared. Add "public/assets" to'
+                . ' build_outputs.',
+            );
+        }
+    }
+
+    private static function buildOutputsDeclarePublicAssets(string $projectDir): bool
+    {
+        $configPath = $projectDir . '/tfsapp.config.json';
+
+        if (!is_file($configPath)) {
+            return false;
+        }
+
+        $contents = file_get_contents($configPath);
+
+        if (false === $contents) {
+            return false;
+        }
+
+        try {
+            $config = json_decode($contents, true, flags: \JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            return false;
+        }
+
+        $buildOutputs = \is_array($config) ? ($config['build_outputs'] ?? null) : null;
+
+        return \is_array($buildOutputs) && \in_array('public/assets', $buildOutputs, true);
+    }
+
+    private static function isPackageInstalled(string $projectDir, string $packageName): bool
+    {
+        $lockPath = $projectDir . '/composer.lock';
+
+        if (!is_file($lockPath)) {
+            return false;
+        }
+
+        $contents = file_get_contents($lockPath);
+
+        if (false === $contents) {
+            return false;
+        }
+
+        try {
+            $lock = json_decode($contents, true, flags: \JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            return false;
+        }
+
+        if (!\is_array($lock)) {
+            return false;
+        }
+
+        foreach (['packages', 'packages-dev'] as $section) {
+            foreach ($lock[$section] ?? [] as $package) {
+                if (\is_array($package) && ($package['name'] ?? null) === $packageName) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     private static function formatBool(bool $value): string
