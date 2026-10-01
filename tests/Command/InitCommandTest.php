@@ -189,11 +189,19 @@ final class InitCommandTest extends TestCase
 
         self::assertSame(self::actionsSkeleton(), $config['actions']);
         self::assertSame(
-            ['secrets', 'update', 'picker', 'close_guard', 'open_files'],
+            ['secrets', 'update', 'picker', 'close_guard', 'open_files', 'media', 'paths'],
             array_keys($config['actions']),
         );
         self::assertArrayNotHasKey('bridge', $config['actions']['picker']);
         self::assertArrayNotHasKey('bridge', $config['actions']['open_files']);
+        self::assertArrayNotHasKey('ipc', $config['actions']['media']);
+        self::assertArrayNotHasKey('bridge', $config['actions']['media']);
+        self::assertArrayNotHasKey('ipc', $config['actions']['paths']);
+        self::assertArrayNotHasKey('bridge', $config['actions']['paths']);
+        self::assertSame(
+            ['desktop', 'documents', 'downloads', 'music', 'pictures', 'public_share', 'templates', 'videos'],
+            array_keys($config['actions']['paths']),
+        );
         self::assertArrayNotHasKey('file_associations', $config);
         foreach ($config['actions'] as $group) {
             self::assertNotContains(true, $group, 'every declared member must default to false');
@@ -219,6 +227,13 @@ final class InitCommandTest extends TestCase
 
         foreach ($ipcOnlyGroups as $group) {
             self::assertArrayNotHasKey('bridge', $config['actions'][$group], sprintf('%s has no bridge transport', $group));
+        }
+
+        $transportlessGroups = ['media', 'paths'];
+
+        foreach ($transportlessGroups as $group) {
+            self::assertArrayNotHasKey('ipc', $config['actions'][$group], sprintf('%s has no transport at all', $group));
+            self::assertArrayNotHasKey('bridge', $config['actions'][$group], sprintf('%s has no transport at all', $group));
         }
 
         self::assertArrayNotHasKey('directories', $config['actions']['secrets']);
@@ -373,7 +388,8 @@ final class InitCommandTest extends TestCase
         self::assertStringContainsString('`tfsapp-hub --help` is the authoritative one', $contents);
         self::assertStringNotContainsString('AppImage', $contents);
         self::assertStringContainsString('## Optional config fields' . \PHP_EOL, $contents);
-        self::assertStringContainsString('`actions`', $contents);
+        self::assertStringContainsString('all seven groups with every member `false`', $contents);
+        self::assertStringContainsString('TFSAppHub\'s `CONTRACT.md` §7', $contents);
         self::assertStringContainsString('`run`', $contents);
         self::assertStringContainsString('`app_port`', $contents);
         self::assertStringContainsString('`icon_path`', $contents);
@@ -489,6 +505,19 @@ final class InitCommandTest extends TestCase
             'open_files' => [
                 'ipc' => false,
                 'directories' => false,
+            ],
+            'media' => [
+                'microphone' => false,
+            ],
+            'paths' => [
+                'desktop' => false,
+                'documents' => false,
+                'downloads' => false,
+                'music' => false,
+                'pictures' => false,
+                'public_share' => false,
+                'templates' => false,
+                'videos' => false,
             ],
         ];
     }

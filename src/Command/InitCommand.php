@@ -139,7 +139,7 @@ final class InitCommand extends Command
             . \PHP_EOL
             . '## Optional config fields' . \PHP_EOL
             . \PHP_EOL
-            . '`tfsapp:init` does not scaffold `actions` beyond its all-`false` skeleton, nor `run`, `app_port`, `icon_path`, or `splash_*` — add these to `tfsapp.config.json` by hand when needed. For the `workers` declaration shape, see TFSAppHub\'s `CONTRACT.md` §2.' . \PHP_EOL
+            . '`tfsapp:init` scaffolds `actions` as all seven groups with every member `false`; turn a capability on by flipping its member to `true` (what each grants is TFSAppHub\'s `CONTRACT.md` §7). It does not scaffold `run`, `app_port`, `icon_path`, or `splash_*` — add these to `tfsapp.config.json` by hand when needed. For the `workers` declaration shape, see TFSAppHub\'s `CONTRACT.md` §2.' . \PHP_EOL
             . \PHP_EOL
             . 'This file was written once by `tfsapp:init` and is never refreshed automatically: a later init run leaves it untouched, and later bundle versions do not rewrite it.' . \PHP_EOL;
 
@@ -346,6 +346,19 @@ final class InitCommand extends Command
             'open_files' => [
                 'ipc' => false,
                 'directories' => false,
+            ],
+            'media' => [
+                'microphone' => false,
+            ],
+            'paths' => [
+                'desktop' => false,
+                'documents' => false,
+                'downloads' => false,
+                'music' => false,
+                'pictures' => false,
+                'public_share' => false,
+                'templates' => false,
+                'videos' => false,
             ],
         ];
     }

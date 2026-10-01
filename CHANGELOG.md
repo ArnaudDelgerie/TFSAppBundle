@@ -9,6 +9,9 @@ bundle supports, so the class duplicated it — and an app that also composed
 Symfony's `Kernel` with `MicroKernelTrait`, as `symfony/skeleton` generates
 it; nothing else changes.
 
+`tfsapp:init`'s `actions` skeleton now covers all seven of the hub's groups:
+`media` and `paths` are added, all members `false` like the rest.
+
 ## 0.1.0
 
 First release: what an app needs to run under TFSAppHub. Extend `TFSAppKernel`
