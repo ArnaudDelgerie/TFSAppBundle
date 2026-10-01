@@ -15,6 +15,10 @@ it; nothing else changes.
 The generated `TFSAPP_README.md` now lists `tfsapp-hub repair`, the command
 to run after an interrupted update or import.
 
+`tfsapp:doctor` no longer flags the FrankenPHP hot-reload block Flex scaffolds
+in `templates/`: the hub never sets `FRANKENPHP_HOT_RELOAD`, so the block renders
+nothing. The off-origin scan keeps running on everything outside that gate.
+
 ## 0.1.0
 
 First release: what an app needs to run under TFSAppHub. Extend `TFSAppKernel`

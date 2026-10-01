@@ -318,6 +318,8 @@ final class DoctorCommand extends Command
                 continue;
             }
 
+            $contents = self::stripHotReloadGate($contents);
+
             foreach ($needles as $needle) {
                 if (str_contains($contents, $needle)) {
                     $offenders[] = substr($file->getPathname(), \strlen($templatesDir) + 1);
@@ -333,10 +335,22 @@ final class DoctorCommand extends Command
 
         $io->warning(sprintf(
             'Off-origin assets found under templates/: %s'
-            . ' — CONTRACT.md §4 forbids anything but \'self\' under the hub\'s CSP.'
-            . ' This is typically the FrankenPHP hot-reload block Flex scaffolds at the end of base.html.twig; remove it before packaging.',
+            . ' — CONTRACT.md §4 forbids anything but \'self\' under the hub\'s CSP.',
             implode(', ', $offenders),
         ));
+    }
+
+    /**
+     * The hub never sets FRANKENPHP_HOT_RELOAD, so the hot-reload block Flex
+     * scaffolds renders nothing and loads nothing: what sits inside it is not
+     * an asset the app serves, and must not be scanned for off-origin URLs.
+     * Flex gates it either on the server value directly or on the variable
+     * its base template sets from that value, so match both spellings; a
+     * negated gate (`{% if not ... %}`) is a live block and stays scanned.
+     */
+    private static function stripHotReloadGate(string $contents): string
+    {
+        return preg_replace('/\{%\s*if\s+frankenphp_hot_reload\s*%\}.*?\{%\s*endif\s*%\}/si', '', $contents) ?? $contents;
     }
 
     private static function formatBool(bool $value): string
