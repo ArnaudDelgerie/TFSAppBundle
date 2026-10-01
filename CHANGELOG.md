@@ -19,6 +19,14 @@ to run after an interrupted update or import.
 in `templates/`: the hub never sets `FRANKENPHP_HOT_RELOAD`, so the block renders
 nothing. The off-origin scan keeps running on everything outside that gate.
 
+`tfsapp:doctor` now catches the three pitfalls a fresh `symfony/skeleton` +
+`webapp` project meets, each naming its one-line fix: a `DATABASE_URL` that is
+not SQLite (migrations are generated against another server and fail at install
+time), a session save path that does not come from `APP_SESSION_DIR` (sessions
+land in `/tmp`), and AssetMapper output that is uncompiled or missing from
+`tfsapp.config.json`'s `build_outputs` (`public/assets/` is gitignored, so it
+only ships once declared).
+
 ## 0.1.0
 
 First release: what an app needs to run under TFSAppHub. Extend `TFSAppKernel`
