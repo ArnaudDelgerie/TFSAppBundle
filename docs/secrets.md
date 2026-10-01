@@ -91,7 +91,7 @@ logs the token or a secret value.
 
 | | protects | exposes |
 | --- | --- | --- |
-| IPC | confidentiality in transit — the value never touches the PHP process | integrity: an XSS in the app can overwrite a declared key |
+| IPC | confidentiality toward the PHP process — the value never touches it; the app's own JavaScript can still read it | an XSS in the app can read or overwrite a declared key |
 | Bridge | integrity — a bearer token only PHP holds | confidentiality to PHP and anything that logs it |
 
 An app building an API-key entry form has a legitimate reason to want
