@@ -85,7 +85,7 @@ off), the same values are the `tfsapp` global:
 
 ```twig
 {% if tfsapp.running_under_hub %}
-    {{ product }} {{ tfsapp.version }}
+    Running {{ tfsapp.version }}.
     {% if not tfsapp.async_worker %}<p>Scheduled work pauses when the window closes.</p>{% endif %}
 {% endif %}
 ```
