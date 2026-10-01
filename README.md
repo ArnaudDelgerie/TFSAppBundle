@@ -21,19 +21,9 @@ Symfony Flex adds `ArnaudDelgerie\TFSAppBundle\TFSAppBundle` to `config/bundles.
 
 Registering the bundle is all it takes: `GET /healthz` (and `HEAD`) then answers `200` before routing and security run — no configuration, no route to declare. Any other path or method is left untouched and reaches the app's own routing as usual. This serves the hub's [`GET /healthz`](https://github.com/ArnaudDelgerie/TFSAppHub/blob/main/contract/4-the-http-contract.md#get-healthz--200) clause.
 
-### Kernel dir relocation
+### Kernel directories
 
-Extend `TFSAppKernel` instead of composing `MicroKernelTrait` directly:
-
-```php
-use ArnaudDelgerie\TFSAppBundle\Kernel\TFSAppKernel;
-
-class Kernel extends TFSAppKernel
-{
-}
-```
-
-This makes `getCacheDir()`, `getBuildDir()` and `getLogDir()` honour the hub's `APP_CACHE_DIR`/`APP_BUILD_DIR`/`APP_LOG_DIR` env vars when they're set, so the installed app never writes to its read-only snapshot. When the vars are absent — dev mode, or any environment the hub doesn't control — behavior is unchanged: each dir falls back to Symfony's own default under the project's `var/`. Why the dirs must move at all is the contract's: [§3, `APP_CACHE_DIR` and `APP_BUILD_DIR` may be emptied at any launch](https://github.com/ArnaudDelgerie/TFSAppHub/blob/main/contract/3-the-environment-the-app-runs-in.md#app_cache_dir-and-app_build_dir-may-be-emptied-at-any-launch).
+Nothing to change in the app's kernel: Symfony's own `MicroKernelTrait` (^7.4) already makes `getCacheDir()`, `getBuildDir()` and `getLogDir()` honour the hub's `APP_CACHE_DIR`/`APP_BUILD_DIR`/`APP_LOG_DIR`, so the skeleton's `src/Kernel.php` stays as generated. Why the dirs must move at all is the contract's: [§3, `APP_CACHE_DIR` and `APP_BUILD_DIR` may be emptied at any launch](https://github.com/ArnaudDelgerie/TFSAppHub/blob/main/contract/3-the-environment-the-app-runs-in.md#app_cache_dir-and-app_build_dir-may-be-emptied-at-any-launch).
 
 ### `tfsapp:init`
 
