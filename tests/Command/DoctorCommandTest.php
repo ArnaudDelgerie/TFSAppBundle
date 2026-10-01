@@ -140,6 +140,7 @@ final class DoctorCommandTest extends TestCase
         self::assertSame(0, $tester->getStatusCode());
         self::assertStringContainsString('database_url', $tester->getDisplay());
         self::assertStringContainsString('(not set)', $tester->getDisplay());
+        self::assertDoesNotMatchRegularExpression('/not\s+SQLite/', $tester->getDisplay());
     }
 
     public function testNonSqliteDatabaseUrlIsPrintedResolvedWithoutFileChecks(): void
@@ -154,6 +155,33 @@ final class DoctorCommandTest extends TestCase
 
         self::assertStringContainsString('postgresql://app:secret@127.0.0.1:5432/app', $display);
         self::assertStringNotContainsString('database_file_exists', $display);
+    }
+
+    public function testNonSqliteDatabaseUrlIsFlaggedWithAWarningNamingTheSqliteFix(): void
+    {
+        putenv('DATABASE_URL=mysql://app:secret@127.0.0.1:3306/app');
+
+        $tester = $this->createTester();
+        $tester->execute([]);
+
+        self::assertSame(0, $tester->getStatusCode());
+        $display = $tester->getDisplay();
+
+        self::assertMatchesRegularExpression('/not\s+SQLite/', $display);
+        self::assertMatchesRegularExpression('/resolves\s+to\s+mysql/', $display);
+        self::assertStringContainsString('DATABASE_URL="sqlite:///%kernel.project_dir%/var/data/app.db"', $display);
+        self::assertMatchesRegularExpression('/Migrations\s+are\s+generated\s+against\s+that\s+server/', $display);
+    }
+
+    public function testSqliteDatabaseUrlDoesNotWarnThatItIsNotSqlite(): void
+    {
+        putenv('DATABASE_URL=sqlite:///%kernel.project_dir%/var/data.db');
+
+        $tester = $this->createTester();
+        $tester->execute([]);
+
+        self::assertSame(0, $tester->getStatusCode());
+        self::assertDoesNotMatchRegularExpression('/not\s+SQLite/', $tester->getDisplay());
     }
 
     public function testSqliteDatabaseUrlResolvesKernelProjectDirPlaceholder(): void
