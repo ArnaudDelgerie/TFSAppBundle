@@ -48,7 +48,10 @@ $ DATABASE_URL="sqlite:///$(pwd)/var/data/app.db" \
 
 With the `.env` line above, a plain `bin/console
 doctrine:migrations:migrate` is enough; the explicit form is for pointing
-at a database other than `.env`'s.
+at a database other than `.env`'s. One first-time detail: the hub creates
+`var/data/` at launch, but a console run before the first one finds no
+directory to create the file in — `mkdir -p var/data` first, or launch
+`tfsapp-hub dev` once.
 
 ## The SQLite pragmas
 

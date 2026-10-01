@@ -86,9 +86,10 @@ tfsapp-hub open myapp
 
 ## The ten pitfalls
 
-Every one of these was met on a fresh project. `bin/console tfsapp:doctor`
-catches the first three (below) and names the fix; all ten are detailed in
-[`docs/`](docs/).
+Every one of these was met on a fresh project; the first and third come
+with the `webapp` pack most apps want (`composer require webapp`).
+`bin/console tfsapp:doctor` catches the first three (below) and names the
+fix; all ten are detailed in [`docs/`](docs/).
 
 1. **`DATABASE_URL` is PostgreSQL in the `webapp` recipe's `.env`.** The
    installed app's database is SQLite, and migrations are generated for the
