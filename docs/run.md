@@ -54,8 +54,8 @@ closing: its lifetime belongs to whoever started it.
 
 - `tfsapp-hub run --stop <id>` stops every active command for that app;
   `run --stop <id> <alias>` narrows it to that alias's instances.
-- `tfsapp-hub run --stop` with no id lists — and `run --replace` — every
-  active command across every installed app.
+- With no id, `run --stop` and `run --replace` alike list the active
+  commands of every installed app and stop nothing.
 - `tfsapp-hub run --replace <id> <alias> [args...]` stops the active
   instance first, then starts a fresh one — the way to release a
   non-`concurrent` alias without a manual `kill`. On a `concurrent`
