@@ -27,8 +27,7 @@ A declared member is resolved through GLib's own reading of
 `~/.config/user-dirs.dirs` and reported as an environment variable —
 `downloads` becomes `TFS_USER_DOWNLOADS_DIR`, `documents`
 `TFS_USER_DOCUMENTS_DIR`, and so on. Read it in PHP the usual way — the variable is present only when the
-member is declared **and** GLib resolves it, so absent means "ask the
-person", never "assume `~/Downloads`":
+member is declared **and** GLib resolves it:
 
 ```php
 $downloads = $_SERVER['TFS_USER_DOWNLOADS_DIR'] ?? null;
