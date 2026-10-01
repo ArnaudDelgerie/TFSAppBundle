@@ -12,6 +12,9 @@ it; nothing else changes.
 `tfsapp:init`'s `actions` skeleton now covers all seven of the hub's groups:
 `media` and `paths` are added, all members `false` like the rest.
 
+The generated `TFSAPP_README.md` now lists `tfsapp-hub repair`, the command
+to run after an interrupted update or import.
+
 ## 0.1.0
 
 First release: what an app needs to run under TFSAppHub. Extend `TFSAppKernel`

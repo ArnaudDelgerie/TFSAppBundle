@@ -186,6 +186,7 @@ final class InitCommand extends Command
             '- `tfsapp-hub open <id>` — open this app\'s window.',
             '- `tfsapp-hub run <id>` — list this app\'s declared `run` aliases; `tfsapp-hub run <id> <alias> [args...]` runs one in the foreground.',
             '- `tfsapp-hub update <id> [<archive.tar.gz>] [--ref <tag>] [--yes]` — re-resolve this app\'s source and update it.',
+            '- `tfsapp-hub repair <id> [--yes]` — restore or finish an interrupted update or import before using that app again.',
             '- `tfsapp-hub rollback <id> [--yes]` — undo the last update, restoring the previous version and database.',
             '- `tfsapp-hub export <id> <path>` — write this app\'s data to `<path>.tar.gz`.',
             '- `tfsapp-hub import <id> <path> [--force] [--yes]` — seed this app\'s data from an export.',

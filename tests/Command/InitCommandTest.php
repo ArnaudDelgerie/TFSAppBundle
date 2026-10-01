@@ -381,6 +381,10 @@ final class InitCommandTest extends TestCase
         self::assertStringContainsString('- `tfsapp-hub open <id>`', $contents);
         self::assertStringContainsString('`tfsapp-hub run <id> <alias> [args...]`', $contents);
         self::assertStringContainsString('- `tfsapp-hub update <id> [<archive.tar.gz>] [--ref <tag>] [--yes]`', $contents);
+        self::assertStringContainsString('- `tfsapp-hub repair <id> [--yes]`', $contents);
+        self::assertStringContainsString('interrupted update or import before using that app again', $contents);
+        self::assertStringNotContainsString('`tfsapp-hub dev`', $contents);
+        self::assertStringNotContainsString('`tfsapp-hub publish`', $contents);
         self::assertStringContainsString('- `tfsapp-hub rollback <id> [--yes]`', $contents);
         self::assertStringContainsString('- `tfsapp-hub export <id> <path>`', $contents);
         self::assertStringContainsString('- `tfsapp-hub import <id> <path> [--force] [--yes]`', $contents);
