@@ -360,22 +360,52 @@ final class DoctorCommandTest extends TestCase
         self::assertStringNotContainsString('Off-origin assets', $tester->getDisplay());
     }
 
-    public function testFrankenphpHotReloadBlockIsFlaggedWithAWarning(): void
+    public function testFrankenphpHotReloadGatedBlockIsNotFlagged(): void
     {
         mkdir($this->projectRoot . '/templates');
+
+        // The hot-reload block of the base template Flex scaffolds, copied
+        // verbatim: gated on the variable set from the server value.
         file_put_contents(
             $this->projectRoot . '/templates/base.html.twig',
-            '<html>{% if hot_reload %}<script src="https://cdn.jsdelivr.net/npm/idiomorph"></script>{% endif %}</html>',
+            <<<'TWIG'
+        {% set frankenphp_hot_reload = app.request.server.get('FRANKENPHP_HOT_RELOAD') %}
+        {% if frankenphp_hot_reload %}
+        <meta name="frankenphp-hot-reload:url" content="{{ frankenphp_hot_reload }}">
+        <script src="https://cdn.jsdelivr.net/npm/idiomorph"></script>
+        <script src="https://cdn.jsdelivr.net/npm/frankenphp-hot-reload/+esm" type="module"></script>
+        {% endif %}
+TWIG,
+        );
+
+        // The same block gated on the server value directly.
+        file_put_contents(
+            $this->projectRoot . '/templates/other.html.twig',
+            <<<'TWIG'
+        {% if FRANKENPHP_HOT_RELOAD %}<meta name="frankenphp-hot-reload:url" content="ws://127.0.0.1">{% endif %}
+TWIG,
         );
 
         $tester = $this->createTester();
         $tester->execute([]);
 
         self::assertSame(0, $tester->getStatusCode());
-        $display = $tester->getDisplay();
+        self::assertStringNotContainsString('Off-origin assets', $tester->getDisplay());
+    }
 
-        self::assertStringContainsString('Off-origin assets found under templates/', $display);
-        self::assertStringContainsString('base.html.twig', $display);
+    public function testNegatedHotReloadGateIsStillFlagged(): void
+    {
+        mkdir($this->projectRoot . '/templates');
+        file_put_contents(
+            $this->projectRoot . '/templates/base.html.twig',
+            '<html>{% if not frankenphp_hot_reload %}<script src="https://cdn.jsdelivr.net/npm/idiomorph"></script>{% endif %}</html>',
+        );
+
+        $tester = $this->createTester();
+        $tester->execute([]);
+
+        self::assertSame(0, $tester->getStatusCode());
+        self::assertStringContainsString('Off-origin assets found under templates/', $tester->getDisplay());
     }
 
     public function testOffOriginAssetInNestedTemplateIsFlagged(): void
@@ -394,6 +424,8 @@ final class DoctorCommandTest extends TestCase
 
         self::assertStringContainsString('Off-origin assets found under templates/', $display);
         self::assertStringContainsString('partials' . \DIRECTORY_SEPARATOR . '_footer.html.twig', $display);
+        self::assertStringContainsString('CONTRACT.md §4 forbids anything but \'self\'', $display);
+        self::assertStringNotContainsString('remove it before packaging', $display);
     }
 
     /**

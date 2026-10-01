@@ -139,7 +139,7 @@ final class InitCommand extends Command
             . \PHP_EOL
             . '## Optional config fields' . \PHP_EOL
             . \PHP_EOL
-            . '`tfsapp:init` does not scaffold `actions` beyond its all-`false` skeleton, nor `run`, `app_port`, `icon_path`, or `splash_*` — add these to `tfsapp.config.json` by hand when needed. For the `workers` declaration shape, see TFSAppHub\'s `CONTRACT.md` §2.' . \PHP_EOL
+            . '`tfsapp:init` scaffolds `actions` as all seven groups with every member `false`; turn a capability on by flipping its member to `true` (what each grants is TFSAppHub\'s `CONTRACT.md` §7). It does not scaffold `run`, `app_port`, `icon_path`, or `splash_*` — add these to `tfsapp.config.json` by hand when needed. For the `workers` declaration shape, see TFSAppHub\'s `CONTRACT.md` §2.' . \PHP_EOL
             . \PHP_EOL
             . 'This file was written once by `tfsapp:init` and is never refreshed automatically: a later init run leaves it untouched, and later bundle versions do not rewrite it.' . \PHP_EOL;
 
@@ -186,6 +186,7 @@ final class InitCommand extends Command
             '- `tfsapp-hub open <id>` — open this app\'s window.',
             '- `tfsapp-hub run <id>` — list this app\'s declared `run` aliases; `tfsapp-hub run <id> <alias> [args...]` runs one in the foreground.',
             '- `tfsapp-hub update <id> [<archive.tar.gz>] [--ref <tag>] [--yes]` — re-resolve this app\'s source and update it.',
+            '- `tfsapp-hub repair <id> [--yes]` — restore or finish an interrupted update or import before using that app again.',
             '- `tfsapp-hub rollback <id> [--yes]` — undo the last update, restoring the previous version and database.',
             '- `tfsapp-hub export <id> <path>` — write this app\'s data to `<path>.tar.gz`.',
             '- `tfsapp-hub import <id> <path> [--force] [--yes]` — seed this app\'s data from an export.',
@@ -346,6 +347,19 @@ final class InitCommand extends Command
             'open_files' => [
                 'ipc' => false,
                 'directories' => false,
+            ],
+            'media' => [
+                'microphone' => false,
+            ],
+            'paths' => [
+                'desktop' => false,
+                'documents' => false,
+                'downloads' => false,
+                'music' => false,
+                'pictures' => false,
+                'public_share' => false,
+                'templates' => false,
+                'videos' => false,
             ],
         ];
     }
