@@ -116,7 +116,7 @@ fix; all ten are detailed in [`docs/`](docs/).
    See [docs/frontend.md](docs/frontend.md).
 7. **Pasting an image or dragging a file in from the file manager delivers no
    file** in the webview. Use `<input type="file">` or the native `picker`.
-   See [docs/picker.md](docs/picker.md).
+   See [docs/webview.md](docs/webview.md) and [docs/picker.md](docs/picker.md).
 8. **Durable files go to `APP_UPLOAD_DIR`** (`UploadStorageInterface`), never
    `public/` or `var/` — an update replaces those. See
    [docs/files.md](docs/files.md).
@@ -153,6 +153,9 @@ Building the app:
 - [`docs/database.md`](docs/database.md) — SQLite, migrations, the pragmas
 - [`docs/frontend.md`](docs/frontend.md) — built assets, the CSP, external
   links, where `invoke` comes from
+- [`docs/webview.md`](docs/webview.md) — the WebKitGTK webview platform:
+  greyscale text, no scroll anchoring, file paste and drag-in, GPU
+  diagnostics
 - [`docs/files.md`](docs/files.md) — `UploadStorageInterface`, downloads,
   what export and import carry
 
