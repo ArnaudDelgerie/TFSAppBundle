@@ -84,6 +84,12 @@ wrote — run it, then:
 tfsapp-hub open myapp
 ```
 
+The installed app also gets a `.desktop` entry, named from `product_name`
+with `icon_path`'s icon, so it shows up in the desktop's application grid
+(in principle — that is the desktop environment's call); `install
+--no-desktop-entry` skips it. See
+[docs/manifest.md](docs/manifest.md#one-identity-several-surfaces).
+
 ## The ten pitfalls
 
 Every one of these was met on a fresh project; the first and third come
