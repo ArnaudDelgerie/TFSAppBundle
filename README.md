@@ -127,6 +127,26 @@ fix; all ten are detailed in [`docs/`](docs/).
     add a `## <version>` entry to `CHANGELOG.md`. See
     [docs/publishing.md](docs/publishing.md).
 
+## Security
+
+One line each for the app developer; the linked page holds the detail.
+
+1. **Loopback is not authentication.** Any local process reaches the
+   app's port, so CSRF protection on state-changing routes is the
+   answer. See [docs/frontend.md](docs/frontend.md).
+2. **An XSS has the reach of the app's own scripts**, declared `ipc`
+   secrets included. See [docs/secrets.md](docs/secrets.md).
+3. **Secrets over IPC or the bridge is a real trade-off**; never log the
+   bridge token or a secret value. See [docs/secrets.md](docs/secrets.md).
+4. **An uploaded file served back inline goes through `inline()`** and
+   its sandboxing CSP, else `download()`. See
+   [docs/files.md](docs/files.md).
+5. **With no reachable keyring, `APP_SECRET` and declared secrets fall
+   back to a plaintext `0600` file** (deliberately not encrypted);
+   `TFS_KEYRING_AVAILABLE` / `HubContextInterface::isKeyringAvailable()`
+   tells the app so it can warn the user. See
+   [docs/secrets.md](docs/secrets.md).
+
 ## The check: `tfsapp:doctor`
 
 ```sh
