@@ -135,7 +135,8 @@ fix; all ten are detailed in [`docs/`](docs/).
 
 ## Security
 
-One line each for the app developer; the linked page holds the detail.
+For the app developer, one point each; the linked page holds the
+detail.
 
 1. **Loopback is not authentication.** Any local process reaches the
    app's port, so CSRF protection on state-changing routes is the

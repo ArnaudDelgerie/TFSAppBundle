@@ -108,7 +108,6 @@ unavailable. The same global carries the window API the
   process can reach `http://127.0.0.1:<port>`; Symfony's CSRF protection
   on state-changing routes is the standard answer.
 
-The other behaviours once listed here belong to the webview platform
-itself — text antialiasing, missing scroll anchoring, paste and
-drag-in delivering no file — and are collected in
-[webview.md](webview.md).
+The behaviours that belong to the webview platform itself — text
+antialiasing, missing scroll anchoring, paste and drag-in delivering no
+file — are collected in [webview.md](webview.md).

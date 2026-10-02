@@ -1,12 +1,11 @@
 # The webview: WebKitGTK, not Chromium
 
 The hub's window is WebKitGTK through Tauri. That is the trade the whole
-stack rests on: lighter than bundling a Chromium — no extra engine to
-ship, patch and feed GPU memory — and less complete, with gaps that can
-affect rendering quality. This page states them in general terms and
-collects the ones verified on this stack, with their mechanism and the
-way out; nothing here is a guess at a cause. It is the reference for
-"why does it look/behave different from Chrome".
+stack rests on: lighter than bundling a Chromium, and less complete,
+with gaps that can affect rendering quality. This page states them in
+general terms and collects the ones verified on this stack, with their
+mechanism and the way out; nothing here is a guess at a cause. It is
+the reference for "why does it look/behave different from Chrome".
 
 ## Text renders greyscale everywhere
 
