@@ -21,6 +21,9 @@ cannot open a chooser.
 
 ## Front: `pick_path` — which existing file or directory?
 
+`invoke` is Tauri's global — see
+[Where `invoke` comes from](frontend.md#where-invoke-comes-from).
+
 ```js
 invoke("pick_path", { kind: "file" })
 invoke("pick_path", { kind: "directory" })

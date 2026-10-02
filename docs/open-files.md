@@ -43,6 +43,9 @@ beyond what the app's backend already has.
 
 ## The wire
 
+`invoke` is Tauri's global — see
+[Where `invoke` comes from](frontend.md#where-invoke-comes-from).
+
 One invocation — one `open` command, one "Open with" selection — creates
 exactly one request: an opaque id plus the ordered list of paths. The
 whole batch is validated **before** anything is enqueued: every path must

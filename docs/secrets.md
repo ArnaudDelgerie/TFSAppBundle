@@ -30,6 +30,9 @@ are capped at 8 KiB, checked before the store is touched.
 
 ## Front: IPC
 
+`invoke` is Tauri's global — see
+[Where `invoke` comes from](frontend.md#where-invoke-comes-from).
+
 Five commands, each answering for the calling window's own app only:
 
 ```js
