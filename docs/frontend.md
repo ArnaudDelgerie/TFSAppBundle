@@ -104,12 +104,10 @@ unavailable. The same global carries the window API the
 
 ## Loops the webview cannot close
 
-Two webview behaviours worth knowing before they are met as bugs:
-
-- **Pasting or dragging a file in delivers no file.** A pasted image or a
-  drag from the file manager does not produce a `File` object in this
-  webview. Use `<input type="file">` for uploads, or the native
-  [picker](picker.md) when a local path is what the app actually wants.
 - **Same-host requests are not authenticated by the loopback.** Any local
   process can reach `http://127.0.0.1:<port>`; Symfony's CSRF protection
   on state-changing routes is the standard answer.
+
+The behaviours that belong to the webview platform itself — text
+antialiasing, missing scroll anchoring, paste and drag-in delivering no
+file — are collected in [webview.md](webview.md).

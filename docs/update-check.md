@@ -53,6 +53,9 @@ answer.
 
 ## Front: IPC
 
+`invoke` is Tauri's global — see
+[Where `invoke` comes from](frontend.md#where-invoke-comes-from).
+
 ```js
 const result = await invoke("update_check");
 if (result.status === "ok" && result.update_available) { … }

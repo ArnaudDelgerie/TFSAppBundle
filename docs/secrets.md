@@ -30,6 +30,9 @@ are capped at 8 KiB, checked before the store is touched.
 
 ## Front: IPC
 
+`invoke` is Tauri's global — see
+[Where `invoke` comes from](frontend.md#where-invoke-comes-from).
+
 Five commands, each answering for the calling window's own app only:
 
 ```js
@@ -86,6 +89,21 @@ not_found` (group off or unknown path) → `413 payload_too_large` (body
 over 16 KiB) → `400 invalid_body` → `403 key_not_declared` → `413
 value_too_large` → `500 {"error": "storage_failed"}`. The bridge never
 logs the token or a secret value.
+
+## When no keyring is reachable: the fallback file
+
+The store behind these commands is the OS keyring when one answers the
+hub's startup probe — and a plaintext `0600` file, deliberately not
+encrypted, when none does. Two consequences, both owned by
+[§5](https://github.com/ArnaudDelgerie/TFSAppHub/blob/main/contract/5-the-apps-own-state.md):
+a backend flip resets the secret — a launch that reaches the backend
+that did not hold `APP_SECRET` generates a fresh one, and everything
+previously signed stops validating once — and declared secrets are
+visible only from the backend that stored them. Which backend backs
+this launch is reported, not assumed: `TFS_KEYRING_AVAILABLE`
+([environment.md](environment.md)) and
+`HubContextInterface::isKeyringAvailable()` say it, so the app can warn
+its user rather than store into the file silently.
 
 ## Choosing a transport is a real trade-off
 

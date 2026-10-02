@@ -84,6 +84,12 @@ wrote — run it, then:
 tfsapp-hub open myapp
 ```
 
+The installed app also gets a `.desktop` entry, named from `product_name`
+with `icon_path`'s icon, so it shows up in the desktop's application grid
+(in principle — that is the desktop environment's call); `install
+--no-desktop-entry` skips it. See
+[docs/manifest.md](docs/manifest.md#one-identity-several-surfaces).
+
 ## The ten pitfalls
 
 Every one of these was met on a fresh project; the first and third come
@@ -116,7 +122,7 @@ fix; all ten are detailed in [`docs/`](docs/).
    See [docs/frontend.md](docs/frontend.md).
 7. **Pasting an image or dragging a file in from the file manager delivers no
    file** in the webview. Use `<input type="file">` or the native `picker`.
-   See [docs/picker.md](docs/picker.md).
+   See [docs/webview.md](docs/webview.md) and [docs/picker.md](docs/picker.md).
 8. **Durable files go to `APP_UPLOAD_DIR`** (`UploadStorageInterface`), never
    `public/` or `var/` — an update replaces those. See
    [docs/files.md](docs/files.md).
@@ -126,6 +132,27 @@ fix; all ten are detailed in [`docs/`](docs/).
 10. **To publish:** commit everything, bump `app_version` (strict semver),
     add a `## <version>` entry to `CHANGELOG.md`. See
     [docs/publishing.md](docs/publishing.md).
+
+## Security
+
+For the app developer, one point each; the linked page holds the
+detail.
+
+1. **Loopback is not authentication.** Any local process reaches the
+   app's port, so CSRF protection on state-changing routes is the
+   answer. See [docs/frontend.md](docs/frontend.md).
+2. **An XSS has the reach of the app's own scripts**, declared `ipc`
+   secrets included. See [docs/secrets.md](docs/secrets.md).
+3. **Secrets over IPC or the bridge is a real trade-off**; never log the
+   bridge token or a secret value. See [docs/secrets.md](docs/secrets.md).
+4. **An uploaded file served back inline goes through `inline()`** and
+   its sandboxing CSP, else `download()`. See
+   [docs/files.md](docs/files.md).
+5. **With no reachable keyring, `APP_SECRET` and declared secrets fall
+   back to a plaintext `0600` file** (deliberately not encrypted);
+   `TFS_KEYRING_AVAILABLE` / `HubContextInterface::isKeyringAvailable()`
+   tells the app so it can warn the user. See
+   [docs/secrets.md](docs/secrets.md).
 
 ## The check: `tfsapp:doctor`
 
@@ -153,6 +180,9 @@ Building the app:
 - [`docs/database.md`](docs/database.md) — SQLite, migrations, the pragmas
 - [`docs/frontend.md`](docs/frontend.md) — built assets, the CSP, external
   links, where `invoke` comes from
+- [`docs/webview.md`](docs/webview.md) — the WebKitGTK webview platform:
+  greyscale text, no scroll anchoring, file paste and drag-in, GPU
+  diagnostics
 - [`docs/files.md`](docs/files.md) — `UploadStorageInterface`, downloads,
   what export and import carry
 

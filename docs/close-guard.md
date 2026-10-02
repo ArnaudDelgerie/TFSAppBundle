@@ -24,6 +24,9 @@ the bridge and injects `TFS_BRIDGE_URL`/`TFS_BRIDGE_TOKEN`.
 
 ## Front: the document's unsaved changes
 
+`invoke` is Tauri's global — see
+[Where `invoke` comes from](frontend.md#where-invoke-comes-from).
+
 Guards are identifiers, not messages: an id is an app-chosen non-empty
 string of at most 128 bytes of UTF-8 (`editor:<document-id>`). Every
 committed load of a window's main frame gives the page a fresh opaque
